@@ -4,10 +4,10 @@ Computer Organization Project
 # Minutes of Meeting
 
 ##  Meeting 2 : Date : 18 Feb 2024
-##### 1. Resolved the Issue raised earlier.
-##### 2. Created parser.jl
-##### 3. Successfully Implemented BubbleSort in Assembly Language
-##### 4. Added instructions addi and sub
+1. Resolved the Issue raised earlier.
+2. Created parser.jl
+3. Successfully Implemented BubbleSort in Assembly Language
+4. Added instructions addi and sub
 
 ##  Meeting 1 : Date : 14 Feb 2024
 ##### _Skipping Prom Night for this dual core processor_
