@@ -1,0 +1,8 @@
+18 Feb 2024
+    . Memory has two rows.
+        . First row is for storing the value
+        . second row row is for acting as flag. Which core is currently using the memory and the other cores don't have acces to it
+            .Since Dual Core , the flag is defined as : 
+                . 0 : Memory is currently unused by neither core
+                . 1 : Memory can be accessed by only core 1
+                . 2 : Memory can be accessed by only core 2
