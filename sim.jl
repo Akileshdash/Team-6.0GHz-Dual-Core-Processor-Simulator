@@ -46,14 +46,27 @@ function run(processor::Processor)
     end
 end
 
+function int_to_5bit_bin(n::Int)
+    binary_str = string(n, base=2, pad=5)
+    
+    return binary_str
+end
+
+function int_to_signed_12bit_bin(n::Int)
+    binary_str = string(n + 2^12, base=2)[2:end]
+    return binary_str
+end
+
+
 sim = processor_Init()  
 
 sim.cores[1].registers[1] = 0   #X0
 sim.cores[1].registers[3] = 800   #X2
 sim.cores[1].registers[4] = 9   #X3
 sim.cores[2].registers[3] = 9   #X3
-sim.cores[1].program = ["MV X31 X2","SW X2 8(X0)"]
-sim.cores[2].program = ["SW X2 0(X0)","SW X2 10(X0)","LW x31 0(X0)"]
+# sim.cores[1].program = ["MV X31 X2","SW X2 8(X0)"]
+# sim.cores[2].program = ["SW X2 0(X0)","SW X2 10(X0)","LW x31 0(X0)"]
+sim.cores[1].program = ["ADDI X15 X1 -50"]
 
 run(sim)
 
