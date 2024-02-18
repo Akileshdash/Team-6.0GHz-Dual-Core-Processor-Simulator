@@ -1,3 +1,6 @@
+include("Execute_Func.jl")
+include("parser.jl")
+
 mutable struct Core1
     # Define Core properties here
     id::Int
@@ -11,77 +14,6 @@ function core_Init(id)
     pc = 1
     program = []
     return Core1(id,registers, pc, program)
-end
-
-function execute(core::Core1, memory)
-    parts = split(core.program[core.pc], ' ') 
-    opcode = parts[1]
-
-    #ADD rd rs1 rs2
-    if opcode == "ADD"
-        rd = parse(Int, parts[2][2:end])+1
-        rs1 = parse(Int, parts[3][2:end])+1
-        rs2 = parse(Int, parts[4][2:end])+1
-        core.registers[rd] = core.registers[rs1] + core.registers[rs2]
-
-    #ADD rd rs1 imm_value
-    elseif opcode == "ADDI"
-        rd = parse(Int, parts[2][2:end])+1
-        rs1 = parse(Int, parts[3][2:end])+1
-        imm_value = parse(Int, parts[4]) #Immediate value
-        core.registers[rd] = core.registers[rs1] + imm_value
-    
-    #SUB rd rs1 rs2
-    elseif opcode == "SUB"
-        rd = parse(Int, parts[2][2:end])+1
-        rs1 = parse(Int, parts[3][2:end])+1
-        rs2 = parse(Int, parts[4][2:end])+1
-        core.registers[rd] = core.registers[rs1] - core.registers[rs2]
-
-    #LI rd immediate
-    elseif opcode == "LI"
-        rd = parse(Int, parts[2][2:end])+1
-        imm_value = parse(Int, parts[3]) #Immediate value
-        core.registers[rd] =  imm_value
-
-    #MV rd rs
-    elseif opcode == "MV"
-        rd = parse(Int, parts[2][2:end])+1
-        rs = parse(Int, parts[3][2:end])+1
-        core.registers[rd] =  core.registers[rs]
-
-    #LW rd offset(rs)
-    elseif opcode == "LW"
-        rd = parse(Int, parts[2][2:end])+1
-        offset = replace(parts[3], r"[^0-9]" => "")
-        offset = parse(Int, offset)
-        rs = match(r"\(([^)]+)\)", parts[3])
-        rs = rs.captures[1][2:end]
-        #Further Function has to be written
-        ###################################
-
-    #SW rs offset(rd)
-    elseif opcode == "SW"
-        rs = parse(Int, parts[2][2:end])+1
-        offset = match(r"\d+", parts[3])
-        offset = parse(Int, offset.match)
-        rd = match(r"\(([^)]+)\)", parts[3])
-        rd = rd.captures[1][2:end]
-        rd = parse(Int, rd)
-        println(core.registers[rd+1]+offset+1)
-        memory[1,core.registers[rd+1]+offset+1]=core.registers[rs]
-        memory[2,core.registers[rd+1]+offset+1]=core.id
-        #Further Function has to be written
-        ###################################
-
-    #J Label
-    elseif opcode == "J"
-        label = parts[2]
-        #println(label)
-        core.pc = findfirst(x -> x == label,core.program)+1
-        println("program conuter =  ",core.pc)
-    end
-    core.pc += 1
 end
 
 mutable struct Processor
@@ -117,11 +49,11 @@ end
 sim = processor_Init()  
 
 sim.cores[1].registers[1] = 0   #X0
-sim.cores[1].registers[3] = 8   #X2
+sim.cores[1].registers[3] = 800   #X2
 sim.cores[1].registers[4] = 9   #X3
 sim.cores[2].registers[3] = 9   #X3
 sim.cores[1].program = ["MV X31 X2","SW X2 8(X0)"]
-sim.cores[2].program = ["SW X2 0(X0)"]
+sim.cores[2].program = ["SW X2 0(X0)","SW X2 10(X0)","LW x31 0(X0)"]
 
 run(sim)
 
@@ -136,7 +68,7 @@ println()
 for i in 1:40
     print(sim.memory[2,i]," ")
 end
-
+println()
 
 #=
 1.Add
