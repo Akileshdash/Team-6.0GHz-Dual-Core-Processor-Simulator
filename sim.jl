@@ -17,13 +17,13 @@ function core_Init(id)
 end
 
 mutable struct Processor
-    memory::Array{Int,2}
+    memory::Array{UInt8,2}
     clock::Int
     cores::Array{Core1,1}
 end
 
 function processor_Init()
-    memory = fill(0,(4096, 4096))
+    memory = zeros(UInt8, (1024, 4))
     clock = 0
     cores = [core_Init(1), core_Init(2)] 
     return Processor(memory, clock, cores)
@@ -34,12 +34,6 @@ function run(processor::Processor)
         for i in 1:2
             if processor.clock < length(processor.cores[i].program) && processor.cores[i].pc<=length(processor.cores[i].program)                
                 execute(processor.cores[i],processor.memory)
-
-            for i in 1:2
-                println(sim.cores[i].registers)
-            end
-            println("\n")
-
             end
         end
         processor.clock += 1
@@ -64,49 +58,43 @@ end
 
 sim = processor_Init()  
 
+
+function show_hex(value::UInt8)
+    hex_str = string(value, base=16)
+    padded_str = rpad(hex_str, 2, '0')
+    return padded_str
+end
+
+function show(proc::Processor)
+    println("Processor Memory (in hex):")
+    for row in reverse(1:size(proc.memory, 1))  # Iterate through rows in reverse order
+        combined_value = UInt32(0)
+        print("$row -> ")
+        for col in 1:size(proc.memory, 2)
+            print("0x$(show_hex(proc.memory[row, col]))\t")
+            if col % 4 == 0
+                println()
+            end
+        end
+    end
+end
+
+
+sim.memory[1,2]=200
+sim.memory[1,1]=100
+sim.memory[2,2]=10
+
 sim.cores[1].registers[1] = 0   #X0
 sim.cores[1].registers[3] = 800   #X2
-sim.cores[1].registers[4] = 9   #X3
+sim.cores[1].registers[4] = 9   #X2
 sim.cores[2].registers[3] = 9   #X3
-# sim.cores[1].program = ["MV X31 X2","SW X2 8(X0)"]
-# sim.cores[2].program = ["SW X2 0(X0)","SW X2 10(X0)","LW x31 0(X0)"]
-sim.cores[1].program = ["ADDI X15 X1 -50"]
 
+sim.cores[1].program = ["LB X0 1(X0)"]
+
+show(sim)
 run(sim)
 
+println("\nCores : \n")
 for i in 1:2
     println(sim.cores[i].registers)
 end
-println()
-for i in 1:40
-    print(sim.memory[1,i]," ")
-end
-println()
-for i in 1:40
-    print(sim.memory[2,i]," ")
-end
-println()
-
-#=
-1.Add
-2.Addi
-3.Sub
-5.LD
-4.LW
-6.la
-7.li
-8.mv
-8.srl
-9.sra
-10.srli
-8.slli
-9.jal
-10.jalr
-11.j
-12.ecall
-13.bgt
-14.bne
-15.beq
-16.bnez
-17.
-=#

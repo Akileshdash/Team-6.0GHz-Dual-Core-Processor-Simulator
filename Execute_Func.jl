@@ -1,3 +1,22 @@
+#This function extracts the entire word, i.e. 32 bits from the initial index
+#considering Big Endian
+function word(memory,row,col)
+    temp=UInt32(memory[row,col])
+    count=1
+    while (col<4) & (count<4)
+        temp = temp<<8 | memory[row,col+1]
+        col+=1
+        count+=1
+    end
+    row+=1
+    col=1
+    while (col<=4) & (count<4)
+        temp = temp<<8 | memory[row,col]
+        col+=1
+        count+=1
+    end
+    return temp
+end
 
 mutable struct Core1
     # Define Core properties here
@@ -181,8 +200,9 @@ function execute(core::Core1, memory)
         rs = rs.captures[1][2:end]
         rs = parse(Int, rs)+1
         L_format_instruction = int_to_signed_12bit_bin(offset)*int_to_5bit_bin(rs-1)*"000"*int_to_5bit_bin(rd-1)*L_format_instruction
-        core.registers[rd]=memory[1,core.registers[rs]+offset+1]
-        #Function has to be written after Memory 2d Array is formed
+        row = div(core.registers[rs] + offset + 1, 4) + 1
+        col = (core.registers[rs]+offset+1)%4
+        core.registers[rd] = memory[row,col]
 
 #16    #LH rd, offset(rs)
     elseif opcode == "LH"
@@ -206,6 +226,9 @@ function execute(core::Core1, memory)
         rs = parse(Int, rs)+1
         L_format_instruction = int_to_signed_12bit_bin(offset)*int_to_5bit_bin(rs-1)*"010"*int_to_5bit_bin(rd-1)*L_format_instruction
         core.registers[rd]=memory[1,core.registers[rs]+offset+1]
+        row = div(core.registers[rs] + offset + 1, 4) + 1
+        col = (core.registers[rs]+offset+1)%4
+        core.registers[rd] = word(memory,row,col)       #This function is written in the beginning
         #Function has to be written after Memory 2d Array is formed
 
 #18    #LBU rd, offset(rs)

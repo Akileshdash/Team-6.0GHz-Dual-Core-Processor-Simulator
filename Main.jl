@@ -1,7 +1,7 @@
-include("sim.jl")
-include("Execute_Func.jl")
-include("parser.jl")
+#Every file is included in sim.jl
+#So it is enough to just include sim.jl
 
+include("sim.jl")
 
 file_path = "./test.asm"
 text_instructions,data_instructions = parse_assembly(file_path)
