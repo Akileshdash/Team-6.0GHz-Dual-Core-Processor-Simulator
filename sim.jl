@@ -57,6 +57,10 @@ function int_to_signed_12bit_bin(n::Int)
     return binary_str
 end
 
+function int_to_20bit_bin(n::Int)
+    binary_str = string(n + 2^20, base=2)[2:end]
+    return binary_str
+end
 
 sim = processor_Init()  
 
