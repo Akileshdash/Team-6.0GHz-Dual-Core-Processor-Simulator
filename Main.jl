@@ -15,7 +15,9 @@ for i in eachindex(text_instructions)
     #println(modified_str, "  ", final_str)
 end
 println(sim.cores[1].program)
+show(sim)
 run(sim)
+show(sim)
 for i in 1:2
     println(sim.cores[i].registers)
 end

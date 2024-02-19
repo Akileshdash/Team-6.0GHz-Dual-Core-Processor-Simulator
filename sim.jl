@@ -30,13 +30,8 @@ function processor_Init()
 end
 
 function run(processor::Processor)
-    while processor.clock < max(length(processor.cores[1].program), length(processor.cores[2].program))
-        for i in 1:2
-            if processor.clock < length(processor.cores[i].program) && processor.cores[i].pc<=length(processor.cores[i].program)                
-                execute(processor.cores[i],processor.memory)
-            end
-        end
-        processor.clock += 1
+    while processor.cores[1].pc<=length(processor.cores[1].program)                      
+        execute(processor.cores[1],processor.memory)
     end
 end
 
@@ -58,15 +53,15 @@ end
 
 
 
-function show_hex(value::UInt8)
+function show_hex(value)
     hex_str = string(value, base=16)
-    padded_str = rpad(hex_str, 2, '0')
-    return padded_str
+    return lpad(hex_str, 2, '0')
 end
 
 function show(proc::Processor)
     println("Processor Memory (in hex):")
-    for row in reverse(1:size(proc.memory, 1))  # Iterate through rows in reverse order
+    rows_to_show = min(10, size(proc.memory, 1))  # Choose the minimum of 10 and the actual number of rows
+    for row in reverse(1:rows_to_show)
         combined_value = UInt32(0)
         print("$row -> ")
         for col in 1:size(proc.memory, 2)
@@ -91,7 +86,6 @@ sim = processor_Init()
 
 # sim.cores[1].program = ["LB X0 1(X0)"]
 
-#show(sim)
 # run(sim)
 
 # println("\nCores : \n")

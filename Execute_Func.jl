@@ -1,22 +1,104 @@
 #This function extracts the entire word, i.e. 32 bits from the initial index
 #considering Big Endian
-function word(memory,row,col)
-    temp=UInt32(memory[row,col])
-    count=1
-    while (col<4) & (count<4)
-        temp = temp<<8 | memory[row,col+1]
-        col+=1
-        count+=1
-    end
-    row+=1
-    col=1
-    while (col<=4) & (count<4)
-        temp = temp<<8 | memory[row,col]
-        col+=1
-        count+=1
-    end
-    return temp
+
+
+function show_hex(value)
+    hex_str = string(value, base=16)
+    return lpad(hex_str, 8, '0')
 end
+
+function in_memory_place_word(memory,row,col,bin)       #Storing 32 bits
+
+    memory[row,col]=parse(Int, bin[25:32], base=2)
+    col+=1
+    if col<=4
+        memory[row,col]=parse(Int, bin[17:24], base=2)
+        col+=1
+        if col<=4
+            memory[row,col]=parse(Int, bin[9:16], base=2)
+            col+=1
+            if col<=4
+                memory[row,col]=parse(Int, bin[1:8], base=2)
+            else
+                row+=1
+                col=1
+                memory[row,col]=parse(Int, bin[1:8], base=2)
+            end
+        else
+            col=1
+            row+=1
+            memory[row,col]=parse(Int, bin[9:16], base=2)
+            col+=1
+            memory[row,col]=parse(Int, bin[1:8], base=2)
+        end
+    else
+        col=1
+        row+=1
+        memory[row,col]=parse(Int, bin[17:24], base=2)
+        col+=1
+        memory[row,col]=parse(Int, bin[9:16], base=2)
+        col+=1
+        memory[row,col]=parse(Int, bin[1:8], base=2)
+    end
+end
+
+function in_memory_place_halfword(memory,row,col,bin)       #Storing last 16 bits
+    memory[row,col]=parse(Int, bin[25:32], base=2)
+    col+=1
+    if col<=4
+        memory[row,col]=parse(Int, bin[17:24], base=2)
+    else
+        col=1
+        row+=1
+        memory[row,col]=parse(Int, bin[17:24], base=2)
+    end
+end
+
+
+function return_word_from_memory(memory,row,col)       #returns 32 bits from the specified memory and next 3 memory units
+    value=UInt32(memory[row,col])
+    col+=1
+    if col<=4
+        temp =  UInt32(memory[row,col])<<8
+        value =  (temp) | (value) 
+        col+=1
+        if col<=4
+            temp =  UInt32(memory[row,col])<<16
+            value =  (temp) | (value) 
+            col+=1
+            if col<=4
+                temp =  UInt32(memory[row,col])<<24
+                value =  (temp) | (value) 
+            else
+                col=1
+                row+=1
+                temp = UInt32(memory[row,col])<<24
+                value =  (temp) | (value) 
+            end
+        else
+            col=1
+            row+=1
+            temp =  UInt32(memory[row,col])<<16
+            value =  (temp) | (value) 
+            col+=1
+            temp =  UInt32(memory[row,col])<<24
+            value =  (temp) | (value) 
+        end
+    else
+        col=1
+        row+=1
+        temp =  UInt32(memory[row,col])<<8
+        value =  (temp) | (value) 
+        col+=1
+        temp =  UInt32(memory[row,col])<<16
+        value =  (temp) | (value) 
+        col+=1
+        temp =  UInt32(memory[row,col])<<24
+        value =  (temp) | (value) 
+    end
+    return value
+end
+
 
 mutable struct Core1
     # Define Core properties here
@@ -202,6 +284,10 @@ function execute(core::Core1, memory)
         L_format_instruction = int_to_signed_12bit_bin(offset)*int_to_5bit_bin(rs-1)*"000"*int_to_5bit_bin(rd-1)*L_format_instruction
         row = div(core.registers[rs] + offset + 1, 4) + 1
         col = (core.registers[rs]+offset+1)%4
+        if col==0
+            col=4
+            row-=1
+        end
         core.registers[rd] = memory[row,col]
 
 #16    #LH rd, offset(rs)
@@ -212,6 +298,12 @@ function execute(core::Core1, memory)
         rs = match(r"\(([^)]+)\)", parts[3])
         rs = rs.captures[1][2:end]
         rs = parse(Int, rs)+1
+        row = div(core.registers[rs] + offset + 1, 4) + 1
+        col = (core.registers[rs]+offset+1)%4
+        if col==0
+            col=4
+            row-=1
+        end
         L_format_instruction = int_to_signed_12bit_bin(offset)*int_to_5bit_bin(rs-1)*"001"*int_to_5bit_bin(rd-1)*L_format_instruction
         core.registers[rd]=memory[1,core.registers[rs]+offset+1]
         #Function has to be written after Memory 2d Array is formed
@@ -225,11 +317,13 @@ function execute(core::Core1, memory)
         rs = rs.captures[1][2:end]
         rs = parse(Int, rs)+1
         L_format_instruction = int_to_signed_12bit_bin(offset)*int_to_5bit_bin(rs-1)*"010"*int_to_5bit_bin(rd-1)*L_format_instruction
-        core.registers[rd]=memory[1,core.registers[rs]+offset+1]
         row = div(core.registers[rs] + offset + 1, 4) + 1
         col = (core.registers[rs]+offset+1)%4
-        core.registers[rd] = word(memory,row,col)       #This function is written in the beginning
-        #Function has to be written after Memory 2d Array is formed
+        if col==0
+            col=4
+            row-=1
+        end
+        core.registers[rd] = return_word_from_memory(memory,row,col)       #This function is written in the beginning
 
 #18    #LBU rd, offset(rs)
     elseif opcode == "LBU"
@@ -268,11 +362,15 @@ function execute(core::Core1, memory)
         rd = match(r"\(([^)]+)\)", parts[3])
         rd = rd.captures[1][2:end]
         rd = parse(Int, rd)+1
-        memory[1,core.registers[rd]+offset+1]=core.registers[rs]
-        memory[2,core.registers[rd]+offset+1]=core.id
+        row = div(core.registers[rd] + offset + 1, 4) + 1
+        col = (core.registers[rd]+offset+1)%4
+        if col==0
+            col=4
+            row-=1
+        end
         imm = int_to_signed_12bit_bin(offset)
         S_format_instruction = imm[1:7]*int_to_5bit_bin(rs-1)*int_to_5bit_bin(rd-1)*"000"*imm[8:12]*S_format_instruction
-        #Function has to be written after Memory 2d Array is formed
+        memory[row,col]=core.registers[rs]
         
 
 #21    #SH rs offset(rd)
@@ -283,11 +381,17 @@ function execute(core::Core1, memory)
         rd = match(r"\(([^)]+)\)", parts[3])
         rd = rd.captures[1][2:end]
         rd = parse(Int, rd)+1
-        memory[1,core.registers[rd]+offset+1]=core.registers[rs]
-        memory[2,core.registers[rd]+offset+1]=core.id
+        row = div(core.registers[rd] + offset + 1, 4) + 1
+        col = (core.registers[rd]+offset+1)%4
+        if col==0
+            col=4
+            row-=1
+        end
         imm = int_to_signed_12bit_bin(offset)
         S_format_instruction = imm[1:7]*int_to_5bit_bin(rs-1)*int_to_5bit_bin(rd-1)*"001"*imm[8:12]*S_format_instruction
-        #Function has to be written after Memory 2d Array is formed
+        bin = string(core.registers[rs], base=2, pad=32) 
+        in_memory_place_halfword(memory,row,col,bin)   #Little Endian
+
 
 #22    #SW rs offset(rd)
     elseif opcode == "SW"
@@ -297,11 +401,17 @@ function execute(core::Core1, memory)
         rd = match(r"\(([^)]+)\)", parts[3])
         rd = rd.captures[1][2:end]
         rd = parse(Int, rd)+1
-        memory[1,core.registers[rd]+offset+1]=core.registers[rs]
-        memory[2,core.registers[rd]+offset+1]=core.id
         imm = int_to_signed_12bit_bin(offset)
         S_format_instruction = imm[1:7]*int_to_5bit_bin(rs-1)*int_to_5bit_bin(rd-1)*"010"*imm[8:12]*S_format_instruction
-        #Function has to be written after Memory 2d Array is formed
+        row = div(core.registers[rd] + offset + 1, 4) + 1
+        col = (core.registers[rd]+offset+1)%4
+        if col==0
+            col=4
+            row-=1
+        end
+        bin = string(core.registers[rs], base=2, pad=32) 
+        in_memory_place_word(memory,row,col,bin)   #Little Endian
+
 
     
 #====================================================================================================================
@@ -313,16 +423,16 @@ function execute(core::Core1, memory)
     elseif opcode == "BEQ"
         rs1 = parse(Int, parts[2][2:end])+1
         rs2 = parse(Int, parts[3][2:end])+1
-        offset = parse(Int, parts[4]) 
-        imm = int_to_signed_12bit_bin(offset)
-        imm = '0'*imm[1:11]
-        B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"000"*imm[9:12]*imm[2]*B_format_instruction
+        label = parts[4]
+        #offset = parse(Int, parts[4]) 
+        #imm = int_to_signed_12bit_bin(offset)
+        #imm = '0'*imm[1:11]
+        #B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"000"*imm[9:12]*imm[2]*B_format_instruction
         if core.registers[rs1] == core.registers[rs2]
-            core.pc = findfirst(x -> x == label,core.program)+1
+            core.pc = findfirst(x -> x == label,core.program)
         else 
             core.pc = core.pc
         end
-        #Function has to be written after Memory 2d Array is formed
 
 #24    #BNE  rs1 rs2 label
        #BNE  rs1 rs2 offset
@@ -339,17 +449,38 @@ function execute(core::Core1, memory)
         else 
             core.pc = core.pc
         end
-        #Function has to be written after Memory 2d Array is formed
 
-#25    #BLT  rs1 rs2 offset
+#25    #BLT  rs1 rs2 label
+       #BLT  rs1 rs2 offset
     elseif opcode == "BLT"
         rs1 = parse(Int, parts[2][2:end])+1
         rs2 = parse(Int, parts[3][2:end])+1
-        offset = parse(Int, parts[4]) 
-        imm = int_to_signed_12bit_bin(offset)
-        imm = '0'*imm[1:11]
-        B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"100"*imm[9:12]*imm[2]*B_format_instruction
-        #Function has to be written after Memory 2d Array is formed
+        label = parts[4]
+        #offset = parse(Int, parts[4]) 
+        #imm = int_to_signed_12bit_bin(offset)
+        #imm = '0'*imm[1:11]
+        #B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"100"*imm[9:12]*imm[2]*B_format_instruction
+        if core.registers[rs1] < core.registers[rs2]
+            core.pc = findfirst(x -> x == label,core.program) 
+        else 
+            core.pc = core.pc
+        end
+
+#25    #BGT  rs1 rs2 label
+       #BLT  rs1 rs2 offset
+    elseif opcode == "BGT"
+        rs1 = parse(Int, parts[2][2:end])+1
+        rs2 = parse(Int, parts[3][2:end])+1
+        label = parts[4]
+        #offset = parse(Int, parts[4]) 
+        #imm = int_to_signed_12bit_bin(offset)
+        #imm = '0'*imm[1:11]
+        #B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"100"*imm[9:12]*imm[2]*B_format_instruction
+        if (core.registers[rs1])>(core.registers[rs2])
+            core.pc = findfirst(x -> x == label,core.program) 
+        else 
+            core.pc = core.pc
+        end
 
 #26    #BGE  rs1 rs2 offset
     elseif opcode == "BGE"
@@ -359,7 +490,11 @@ function execute(core::Core1, memory)
         imm = int_to_signed_12bit_bin(offset)
         imm = '0'*imm[1:11]
         B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"101"*imm[9:12]*imm[2]*B_format_instruction
-        #Function has to be written after Memory 2d Array is formed
+        if core.registers[rs1] > core.registers[rs2]
+            core.pc = findfirst(x -> x == label,core.program) 
+        else 
+            core.pc = core.pc
+        end
 
 #27    #BLTU  rs1 rs2 offset
     elseif opcode == "BLTU"
@@ -411,21 +546,19 @@ function execute(core::Core1, memory)
         JAL_format_instruction=imm[1]*imm[11:19]*imm[10]*imm[2:9]*int_to_5bit_bin(rd-1)*JAL_format_instruction
         #Function has to be written after Memory 2d Array is formed
 
-#31     #JALR rd, rs, offset
-        #JALR rd
+#31     #JALR rd
+        #JALR rd, rs, offset
         rd = parse(Int, parts[2][2:end])+1
-        rs = parse(Int, parts[3][2:end])+1
-        offset = parse(Int, parts[4])      
+        #rs = parse(Int, parts[3][2:end])+1
+        #offset = parse(Int, parts[4])      
         core.pc = core.registers[rd]
         #JALR_format_instruction=imm[1]*imm[11:19]*imm[10]*imm[2:9]*int_to_5bit_bin(rd-1)*JALR_format_instruction
-        #Function has to be written after Memory 2d Array is formed
 
 #30        #J Label
     elseif opcode == "J"
         label = parts[2]
-        #println(label)
-        core.pc = findfirst(x -> x == label,core.program)+1
-        println("program conuter =  ",core.pc)
+        core.pc = findfirst(x -> x == label,core.program)
     end
+
     core.pc += 1
 end
