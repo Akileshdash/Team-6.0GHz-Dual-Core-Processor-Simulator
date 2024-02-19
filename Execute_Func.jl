@@ -15,7 +15,10 @@ function execute(core::Core1, memory)
     I_format_instruction = "0010011"
     L_format_instruction = "0000011"        #Load Format it also comes under I Format
     S_format_instruction = "0100011"        #Store Format
-    B_format_instruction = "1100011"        #Store Format
+    B_format_instruction = "1100011"        #Break Format
+    U_format_instruction = "0110111"        #Upper Immediate Format
+    JAL_format_instruction = "1101111"        #Jump Format
+    JALR_format_instruction = "1100111"        #Jump Format
 
 #====================================================================================================================
                                             R Format Instructions          
@@ -341,13 +344,42 @@ function execute(core::Core1, memory)
         imm = '0'*imm[1:11]
         B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"111"*imm[9:12]*imm[2]*B_format_instruction
         #Function has to be written after Memory 2d Array is formed
-    
+ 
+           
+#====================================================================================================================
+                                            U Format Instructions          ( Upper Immediate Format )
+====================================================================================================================#
+
+#29     #LUI rd, imm    #Load Upper immediate #Loads the immediate value imm into the upper 20 bits of register rd and sets the lower 12 bits to 0.
+    elseif opcode == "LUI"
+        rd = parse(Int, parts[2][2:end])+1
+        imm_value = parse(Int, parts[3])      #Immediate value
+        imm_value = int_to_20bit_bin(imm_value)
+        U_format_instruction=imm_value*int_to_5bit_bin(rd-1)*U_format_instruction
+        core.registers[rd] =  imm_value
+        #Function has to be written after Memory 2d Array is formed
+
+
 #====================================================================================================================
                                             J Format Instructions          ( Jump Format )
 ====================================================================================================================#
 
-#29     #JAL rd, offset
-    
+#30     #JAL rd, offset
+        rd = parse(Int, parts[2][2:end])+1
+        offset = parse(Int, parts[3])        
+        offset = int_to_20bit_bin(offset)
+        core.registers[rd] = core.pc+1
+        core.pc=core.pc+offset
+        JAL_format_instruction=imm[1]*imm[11:19]*imm[10]*imm[2:9]*int_to_5bit_bin(rd-1)*JAL_format_instruction
+        #Function has to be written after Memory 2d Array is formed
+
+#31     #JALR rd, rs, offset
+        rd = parse(Int, parts[2][2:end])+1
+        rs = parse(Int, parts[3][2:end])+1
+        offset = parse(Int, parts[4])      
+        core.registers[rd] = core.pc+1
+        #JALR_format_instruction=imm[1]*imm[11:19]*imm[10]*imm[2:9]*int_to_5bit_bin(rd-1)*JALR_format_instruction
+        #Function has to be written after Memory 2d Array is formed
 
 #30        #J Label
     elseif opcode == "J"
