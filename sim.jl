@@ -56,7 +56,6 @@ function int_to_20bit_bin(n::Int)
     return binary_str
 end
 
-sim = processor_Init()  
 
 
 function show_hex(value::UInt8)
@@ -79,22 +78,23 @@ function show(proc::Processor)
     end
 end
 
+sim = processor_Init()  
 
-sim.memory[1,2]=200
-sim.memory[1,1]=100
-sim.memory[2,2]=10
+# sim.memory[1,2]=200
+# sim.memory[1,1]=100
+# sim.memory[2,2]=10
 
-sim.cores[1].registers[1] = 0   #X0
-sim.cores[1].registers[3] = 800   #X2
-sim.cores[1].registers[4] = 9   #X2
-sim.cores[2].registers[3] = 9   #X3
+# sim.cores[1].registers[1] = 0   #X0
+# sim.cores[1].registers[3] = 800   #X2
+# sim.cores[1].registers[4] = 9   #X2
+# sim.cores[2].registers[3] = 9   #X3
 
-sim.cores[1].program = ["LB X0 1(X0)"]
+# sim.cores[1].program = ["LB X0 1(X0)"]
 
-show(sim)
-run(sim)
+#show(sim)
+# run(sim)
 
-println("\nCores : \n")
-for i in 1:2
-    println(sim.cores[i].registers)
-end
+# println("\nCores : \n")
+# for i in 1:2
+#     println(sim.cores[i].registers)
+# end

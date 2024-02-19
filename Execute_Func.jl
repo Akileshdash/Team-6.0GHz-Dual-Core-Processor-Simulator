@@ -182,7 +182,7 @@ function execute(core::Core1, memory)
     elseif opcode == "MV"
         rd = parse(Int, parts[2][2:end])+1
         rs = parse(Int, parts[3][2:end])+1
-        I_format_instruction = int_to_signed_12bit_bin(0)*int_to_5bit_bin(rs1-1)*"000"*int_to_5bit_bin(rd-1)*I_format_instruction
+        I_format_instruction = int_to_signed_12bit_bin(0)*int_to_5bit_bin(rs-1)*"000"*int_to_5bit_bin(rd-1)*I_format_instruction
         core.registers[rd] =  core.registers[rs]
 
     
@@ -308,7 +308,8 @@ function execute(core::Core1, memory)
                                             B Format Instructions          ( Branch Format )
 ====================================================================================================================#
 
-#23    #BEQ  rs1 rs2 offset
+#23    #BEQ  rs1 rs2 label
+       #BEQ  rs1 rs2 offset
     elseif opcode == "BEQ"
         rs1 = parse(Int, parts[2][2:end])+1
         rs2 = parse(Int, parts[3][2:end])+1
@@ -316,16 +317,28 @@ function execute(core::Core1, memory)
         imm = int_to_signed_12bit_bin(offset)
         imm = '0'*imm[1:11]
         B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"000"*imm[9:12]*imm[2]*B_format_instruction
+        if core.registers[rs1] == core.registers[rs2]
+            core.pc = findfirst(x -> x == label,core.program)+1
+        else 
+            core.pc = core.pc
+        end
         #Function has to be written after Memory 2d Array is formed
 
-#24    #BNE  rs1 rs2 offset
+#24    #BNE  rs1 rs2 label
+       #BNE  rs1 rs2 offset
     elseif opcode == "BNE"
         rs1 = parse(Int, parts[2][2:end])+1
         rs2 = parse(Int, parts[3][2:end])+1
-        offset = parse(Int, parts[4]) 
-        imm = int_to_signed_12bit_bin(offset)
-        imm = '0'*imm[1:11]
-        B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"001"*imm[9:12]*imm[2]*B_format_instruction
+        label = parts[4]
+        #offset = parse(Int, parts[4]) 
+        #imm = int_to_signed_12bit_bin(offset)
+        #imm = '0'*imm[1:11]
+        #B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"001"*imm[9:12]*imm[2]*B_format_instruction
+        if core.registers[rs1] != core.registers[rs2]
+            core.pc = findfirst(x -> x == label,core.program) 
+        else 
+            core.pc = core.pc
+        end
         #Function has to be written after Memory 2d Array is formed
 
 #25    #BLT  rs1 rs2 offset
@@ -387,20 +400,23 @@ function execute(core::Core1, memory)
                                             J Format Instructions          ( Jump Format )
 ====================================================================================================================#
 
-#30     #JAL rd, offset
+#30     #JAL rd,label
+        #JAL rd, offset
         rd = parse(Int, parts[2][2:end])+1
         offset = parse(Int, parts[3])        
         offset = int_to_20bit_bin(offset)
         core.registers[rd] = core.pc+1
-        core.pc=core.pc+offset
+        core.pc = findfirst(x -> x == label,core.program)+1
+        #core.pc=core.pc+offset
         JAL_format_instruction=imm[1]*imm[11:19]*imm[10]*imm[2:9]*int_to_5bit_bin(rd-1)*JAL_format_instruction
         #Function has to be written after Memory 2d Array is formed
 
 #31     #JALR rd, rs, offset
+        #JALR rd
         rd = parse(Int, parts[2][2:end])+1
         rs = parse(Int, parts[3][2:end])+1
         offset = parse(Int, parts[4])      
-        core.registers[rd] = core.pc+1
+        core.pc = core.registers[rd]
         #JALR_format_instruction=imm[1]*imm[11:19]*imm[10]*imm[2:9]*int_to_5bit_bin(rd-1)*JALR_format_instruction
         #Function has to be written after Memory 2d Array is formed
 

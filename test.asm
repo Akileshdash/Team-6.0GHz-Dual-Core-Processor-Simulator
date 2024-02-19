@@ -1,11 +1,18 @@
-.data
-str: .string "Addition: "
-str1: .string " \n"
-str2: .string "Subtraction: "
-
 .text
-MV X31,X2
-SW X2,8(X0)
+LI X1,1
+LI X2,2
+LI X3,3
+LI X4,4
+LI X5,5
+BNE X2,X3,swap
+LI X31,100
+J exit
 
-Label: 
-    ADD X10,X5,X6
+swap
+    MV X6,X2
+    MV X2,X3
+    MV X3,X6
+    MV X6,X0
+
+exit : 
+    LI X0,100
