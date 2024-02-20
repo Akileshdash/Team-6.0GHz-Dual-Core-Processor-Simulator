@@ -2,9 +2,8 @@
 #So it is enough to just include sim.jl
 
 include("sim.jl")
-
 file_path = "./test.asm"
-
+initial_index=1     #For putting in 
 text_instructions,data_instructions = parse_assembly(file_path)
 
 sim = processor_Init()  
@@ -16,12 +15,15 @@ for i in eachindex(text_instructions)
     push!(sim.cores[1].program, final_str)
     #println(modified_str, "  ", final_str)
 end
-encoding_Instructions(sim.cores[1],sim.memory)
+
+initial_index=encoding_Instructions(sim.cores[1],sim.memory,initial_index)
+initial_index=encoding_Instructions(sim.cores[2],sim.memory,initial_index)
 
 #println(sim.cores[1].program)
 #show(sim)
 #run(sim)
-#show(sim)
+show(sim)
+println(initial_index)
 # for i in 1:2
 #     println(sim.cores[i].registers)
 # end

@@ -47,10 +47,10 @@ function show(proc::Processor)
     end
 end
 
-function show_hex(value)
-    hex_str = string(value, base=16)
-    return lpad(hex_str, 8, '0')
-end
+# function show_hex(value)
+#     hex_str = string(value, base=16)
+#     return lpad(hex_str, 8, '0')
+# end
 
 #This function extracts the entire word, i.e. 32 bits from the initial index
 #considering Big Endian
