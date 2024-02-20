@@ -6,6 +6,9 @@ function replace_colon_with_space(input_string::String)
     return replace(input_string, ':' => ' ')
 end
 
+function replace_d_quotes_with_space(input_string::String)
+    return replace(input_string, '"' => ' ')
+end
 
 function parse_assembly(file_path::String)
     text_instructions = String[]
