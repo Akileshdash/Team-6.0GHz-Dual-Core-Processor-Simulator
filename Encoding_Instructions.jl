@@ -1,9 +1,9 @@
 include("Helper_Functions.jl")
 
-function encoding_Instructions(core::Core1, memory,initial_index)
-    core.pc = initial_index
-    while core.pc<=length(core.program)                      
-        parts = split(core.program[core.pc], ' ') 
+function encoding_Instructions(core::Core1, memory,initial_index,label_array)
+    memory_index = core.pc = initial_index
+    while (core.pc-initial_index+1)<=length(core.program)                      
+        parts = split(core.program[core.pc-initial_index+1],' ') 
         opcode = parts[1]
         R_format_instruction = "0110011"
         I_format_instruction = "0010011"
@@ -14,9 +14,9 @@ function encoding_Instructions(core::Core1, memory,initial_index)
         JAL_format_instruction = "1101111"        #Jump Format
         JALR_format_instruction = "1100111"        #Jump Format
 
-    #====================================================================================================================
-                                                R Format Instructions          
-    ====================================================================================================================#
+        #====================================================================================================================
+                                                    R Format Instructions          
+        ====================================================================================================================#
 
 
         #1    #ADD rd rs1 rs2
@@ -25,7 +25,7 @@ function encoding_Instructions(core::Core1, memory,initial_index)
             rs1 = parse(Int, parts[3][2:end])+1
             rs2 = parse(Int, parts[4][2:end])+1
             R_format_instruction = "0000000"*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"000"*int_to_5bit_bin(rd-1)*R_format_instruction
-            in_memory_place_word(memory,initial_index,1,R_format_instruction)
+            in_memory_place_word(memory,memory_index,1,R_format_instruction)
                 
         #2    #SUB rd rs1 rs2
         elseif opcode == "SUB"
@@ -33,7 +33,7 @@ function encoding_Instructions(core::Core1, memory,initial_index)
             rs1 = parse(Int, parts[3][2:end])+1
             rs2 = parse(Int, parts[4][2:end])+1
             R_format_instruction = "0100000"*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"000"*int_to_5bit_bin(rd-1)*R_format_instruction
-            in_memory_place_word(memory,initial_index,1,R_format_instruction)
+            in_memory_place_word(memory,memory_index,1,R_format_instruction)
         
         #3    #SLL rd, rs1, rs2
         elseif opcode == "SLL"
@@ -41,7 +41,7 @@ function encoding_Instructions(core::Core1, memory,initial_index)
             rs1 = parse(Int, parts[3][2:end])+1
             rs2 = parse(Int, parts[4][2:end])+1
             R_format_instruction = "0000000"*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"001"*int_to_5bit_bin(rd-1)*R_format_instruction
-            in_memory_place_word(memory,initial_index,1,R_format_instruction)
+            in_memory_place_word(memory,memory_index,1,R_format_instruction)
 
         #4    #XOR rd, rs1, rs2
         elseif opcode == "XOR"
@@ -49,7 +49,7 @@ function encoding_Instructions(core::Core1, memory,initial_index)
             rs1 = parse(Int, parts[3][2:end])+1
             rs2 = parse(Int, parts[4][2:end])+1
             R_format_instruction = "0100000"*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"100"*int_to_5bit_bin(rd-1)*R_format_instruction
-            in_memory_place_word(memory,initial_index,1,R_format_instruction)
+            in_memory_place_word(memory,memory_index,1,R_format_instruction)
 
         #5    #SRL rd, rs1, rs2
         elseif opcode == "SRL"
@@ -57,7 +57,7 @@ function encoding_Instructions(core::Core1, memory,initial_index)
             rs1 = parse(Int, parts[3][2:end])+1
             rs2 = parse(Int, parts[4][2:end])+1
             R_format_instruction = "0000000"*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"101"*int_to_5bit_bin(rd-1)*R_format_instruction
-            in_memory_place_word(memory,initial_index,1,R_format_instruction)
+            in_memory_place_word(memory,memory_index,1,R_format_instruction)
             
         #6    #SRA rd, rs1, rs2
         elseif opcode == "SRA"
@@ -65,7 +65,7 @@ function encoding_Instructions(core::Core1, memory,initial_index)
             rs1 = parse(Int, parts[3][2:end])+1
             rs2 = parse(Int, parts[4][2:end])+1
             R_format_instruction = "0100000"*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"101"*int_to_5bit_bin(rd-1)*R_format_instruction
-            in_memory_place_word(memory,initial_index,1,R_format_instruction)
+            in_memory_place_word(memory,memory_index,1,R_format_instruction)
 
         #7    #OR rd, rs1, rs2
         elseif opcode == "OR"
@@ -73,7 +73,7 @@ function encoding_Instructions(core::Core1, memory,initial_index)
             rs1 = parse(Int, parts[3][2:end])+1
             rs2 = parse(Int, parts[4][2:end])+1
             R_format_instruction = "0100000"*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"110"*int_to_5bit_bin(rd-1)*R_format_instruction
-            in_memory_place_word(memory,initial_index,1,R_format_instruction)
+            in_memory_place_word(memory,memory_index,1,R_format_instruction)
         
         #8    #AND rd, rs1, rs2
         elseif opcode == "AND"
@@ -81,11 +81,368 @@ function encoding_Instructions(core::Core1, memory,initial_index)
             rs1 = parse(Int, parts[3][2:end])+1
             rs2 = parse(Int, parts[4][2:end])+1
             R_format_instruction = "0000000"*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"111"*int_to_5bit_bin(rd-1)*R_format_instruction
-            in_memory_place_word(memory,initial_index,1,R_format_instruction)
+            in_memory_place_word(memory,memory_index,1,R_format_instruction)
         
+
+        #====================================================================================================================
+                                                    I Format Instructions          
+        ====================================================================================================================#
+
+
+        #9    #ADDI rd rs1 imm_value
+        elseif opcode == "ADDI"
+            rd = parse(Int, parts[2][2:end])+1
+            rs1 = parse(Int, parts[3][2:end])+1
+            imm_value = parse(Int, parts[4]) #Immediate value
+            I_format_instruction = int_to_signed_12bit_bin(imm_value)*int_to_5bit_bin(rs1-1)*"000"*int_to_5bit_bin(rd-1)*I_format_instruction
+            in_memory_place_word(memory,memory_index,1,I_format_instruction)
+        
+        #10    #XORI rd rs1 imm_value
+        elseif opcode == "XORI"
+            rd = parse(Int, parts[2][2:end])+1
+            rs1 = parse(Int, parts[3][2:end])+1
+            imm_value = parse(Int, parts[4]) #Immediate value
+            I_format_instruction = int_to_signed_12bit_bin(imm_value)*int_to_5bit_bin(rs1-1)*"100"*int_to_5bit_bin(rd-1)*I_format_instruction
+            in_memory_place_word(memory,memory_index,1,I_format_instruction)
+
+        #11    #ORI rd rs1 imm_value
+        elseif opcode == "ORI"
+            rd = parse(Int, parts[2][2:end])+1
+            rs1 = parse(Int, parts[3][2:end])+1
+            imm_value = parse(Int, parts[4]) #Immediate value
+            I_format_instruction = int_to_signed_12bit_bin(imm_value)*int_to_5bit_bin(rs1-1)*"110"*int_to_5bit_bin(rd-1)*I_format_instruction
+            in_memory_place_word(memory,memory_index,1,I_format_instruction)
+
+        #12    #ANDI rd rs1 imm_value
+        elseif opcode == "ANDI"
+            rd = parse(Int, parts[2][2:end])+1
+            rs1 = parse(Int, parts[3][2:end])+1
+            imm_value = parse(Int, parts[4]) #Immediate value
+            I_format_instruction = int_to_signed_12bit_bin(imm_value)*int_to_5bit_bin(rs1-1)*"111"*int_to_5bit_bin(rd-1)*I_format_instruction
+            in_memory_place_word(memory,memory_index,1,I_format_instruction)
+
+        #13    #SLLI rd rs1 shamt                     (shift amount immediate)
+        elseif opcode == "SLLI"
+            rd = parse(Int, parts[2][2:end])+1
+            rs1 = parse(Int, parts[3][2:end])+1
+            shamt = parse(Int, parts[4]) #Shift Amount
+            I_format_instruction = "0000000"*int_to_5bit_bin(shamt)*int_to_5bit_bin(rs1-1)*"001"*int_to_5bit_bin(rd-1)*I_format_instruction
+            in_memory_place_word(memory,memory_index,1,I_format_instruction)
+
+        #14    #SRLI rd rs1 shamt                     (shift amount immediate)
+        elseif opcode == "SRLI"
+            rd = parse(Int, parts[2][2:end])+1
+            rs1 = parse(Int, parts[3][2:end])+1
+            shamt = parse(Int, parts[4]) #Shift Amount
+            I_format_instruction = "0000000"*int_to_5bit_bin(shamt)*int_to_5bit_bin(rs1-1)*"101"*int_to_5bit_bin(rd-1)*I_format_instruction
+            in_memory_place_word(memory,memory_index,1,I_format_instruction)
+
+
+        #13    #SRAI rd rs1 shamt                     (shift amount immediate)
+        elseif opcode == "SRAI"
+            rd = parse(Int, parts[2][2:end])+1
+            rs1 = parse(Int, parts[3][2:end])+1
+            shamt = parse(Int, parts[4]) #Shift Amount
+            I_format_instruction = "0100000"*int_to_5bit_bin(shamt)*int_to_5bit_bin(rs1-1)*"101"*int_to_5bit_bin(rd-1)*I_format_instruction
+            in_memory_place_word(memory,memory_index,1,I_format_instruction)
+
+
+        #LI rd immediate
+        elseif opcode == "LI"
+            rd = parse(Int, parts[2][2:end])+1
+            imm_value = parse(Int, parts[3]) #Immediate value
+            I_format_instruction = int_to_signed_12bit_bin(imm_value)*int_to_5bit_bin(0)*"111"*int_to_5bit_bin(rd-1)*I_format_instruction
+            in_memory_place_word(memory,memory_index,1,I_format_instruction)
+
+         #12    #ANDI rd rs1 imm_value
+        elseif opcode == "ANDI"
+            rd = parse(Int, parts[2][2:end])+1
+            rs1 = parse(Int, parts[3][2:end])+1
+            imm_value = parse(Int, parts[4]) #Immediate value
+            I_format_instruction = int_to_signed_12bit_bin(imm_value)*int_to_5bit_bin(rs1-1)*"111"*int_to_5bit_bin(rd-1)*I_format_instruction
+            in_memory_place_word(memory,memory_index,1,I_format_instruction)
+
+        #MV rd rs               # same as ADDI rd rs 0
+        elseif opcode == "MV"
+            rd = parse(Int, parts[2][2:end])+1
+            rs = parse(Int, parts[3][2:end])+1
+            #I_format_instruction = int_to_signed_12bit_bin(0)*int_to_5bit_bin(rs-1)*"000"*int_to_5bit_bin(rd-1)*I_format_instruction
+            I_format_instruction = int_to_signed_12bit_bin(0)*int_to_5bit_bin(rs1-1)*"111"*int_to_5bit_bin(rd-1)*I_format_instruction
+            in_memory_place_word(memory,memory_index,1,I_format_instruction)
+
+
+        #====================================================================================================================
+                                                L Format Instructions          ( Load Format )
+        ====================================================================================================================#
+
+
+        #16    #LB rd, offset(rs)
+        elseif opcode == "LB"
+            rd = parse(Int, parts[2][2:end])+1
+            offset = match(r"\d+", parts[3])
+            offset = parse(Int, offset.match)
+            rs = match(r"\(([^)]+)\)", parts[3])
+            rs = rs.captures[1][2:end]
+            rs = parse(Int, rs)+1
+            L_format_instruction = int_to_signed_12bit_bin(offset)*int_to_5bit_bin(rs-1)*"000"*int_to_5bit_bin(rd-1)*L_format_instruction
+            in_memory_place_word(memory,memory_index,1,L_format_instruction)
+
+        #16    #LH rd, offset(rs)
+        elseif opcode == "LH"
+            rd = parse(Int, parts[2][2:end])+1
+            offset = match(r"\d+", parts[3])
+            offset = parse(Int, offset.match)
+            rs = match(r"\(([^)]+)\)", parts[3])
+            rs = rs.captures[1][2:end]
+            rs = parse(Int, rs)+1
+            L_format_instruction = int_to_signed_12bit_bin(offset)*int_to_5bit_bin(rs-1)*"001"*int_to_5bit_bin(rd-1)*L_format_instruction
+            core.registers[rd]=memory[1,core.registers[rs]+offset+1]
+            #Function has to be written after Memory 2d Array is formed
+            in_memory_place_word(memory,memory_index,1,L_format_instruction)
+
+        #17    #LW rd offset(rs)
+        elseif opcode == "LW"
+            rd = parse(Int, parts[2][2:end])+1
+            offset = match(r"\d+", parts[3])
+            offset = parse(Int, offset.match)
+            rs = match(r"\(([^)]+)\)", parts[3])
+            rs = rs.captures[1][2:end]
+            rs = parse(Int, rs)+1
+            L_format_instruction = int_to_signed_12bit_bin(offset)*int_to_5bit_bin(rs-1)*"010"*int_to_5bit_bin(rd-1)*L_format_instruction
+            in_memory_place_word(memory,memory_index,1,L_format_instruction)
+
+        #18    #LBU rd, offset(rs)
+        elseif opcode == "LBU"
+            rd = parse(Int, parts[2][2:end])+1
+            offset = match(r"\d+", parts[3])
+            offset = parse(Int, offset.match)
+            rs = match(r"\(([^)]+)\)", parts[3])
+            rs = rs.captures[1][2:end]
+            rs = parse(Int, rs)+1
+            L_format_instruction = int_to_signed_12bit_bin(offset)*int_to_5bit_bin(rs-1)*"100"*int_to_5bit_bin(rd-1)*L_format_instruction
+            core.registers[rd]=memory[1,core.registers[rs]+offset+1]
+            #Function has to be written after Memory 2d Array is formed
+            in_memory_place_word(memory,memory_index,1,L_format_instruction)
+
+        #19    #LHU rd, offset(rs)
+        elseif opcode == "LHU"
+            rd = parse(Int, parts[2][2:end])+1
+            offset = match(r"\d+", parts[3])
+            offset = parse(Int, offset.match)
+            rs = match(r"\(([^)]+)\)", parts[3])
+            rs = rs.captures[1][2:end]
+            rs = parse(Int, rs)+1
+            L_format_instruction = int_to_signed_12bit_bin(offset)*int_to_5bit_bin(rs-1)*"101"*int_to_5bit_bin(rd-1)*L_format_instruction
+            core.registers[rd]=memory[1,core.registers[rs]+offset+1]
+            #Function has to be written after Memory 2d Array is formed
+            in_memory_place_word(memory,memory_index,1,L_format_instruction)
+
+
+        #====================================================================================================================
+                                                S Format Instructions          ( Store Format )
+        ====================================================================================================================#
+
+        #20    #SB rs, offset(rd)
+        elseif opcode == "SB"
+            rs = parse(Int, parts[2][2:end])+1
+            offset = match(r"\d+", parts[3])
+            offset = parse(Int, offset.match)
+            rd = match(r"\(([^)]+)\)", parts[3])
+            rd = rd.captures[1][2:end]
+            rd = parse(Int, rd)+1
+            imm = int_to_signed_12bit_bin(offset)
+            S_format_instruction = imm[1:7]*int_to_5bit_bin(rs-1)*int_to_5bit_bin(rd-1)*"000"*imm[8:12]*S_format_instruction
+            in_memory_place_word(memory,memory_index,1,S_format_instruction)
+            
+
+        #21    #SH rs offset(rd)
+        elseif opcode == "SH"
+            rs = parse(Int, parts[2][2:end])+1
+            offset = match(r"\d+", parts[3])
+            offset = parse(Int, offset.match)
+            rd = match(r"\(([^)]+)\)", parts[3])
+            rd = rd.captures[1][2:end]
+            rd = parse(Int, rd)+1
+            imm = int_to_signed_12bit_bin(offset)
+            S_format_instruction = imm[1:7]*int_to_5bit_bin(rs-1)*int_to_5bit_bin(rd-1)*"001"*imm[8:12]*S_format_instruction
+            bin = string(core.registers[rs], base=2, pad=32) 
+            in_memory_place_halfword(memory,row,col,bin)   #Little Endian
+            in_memory_place_word(memory,memory_index,1,S_format_instruction)
+
+
+        #22    #SW rs offset(rd)
+        elseif opcode == "SW"
+            rs = parse(Int, parts[2][2:end])+1
+            offset = match(r"\d+", parts[3])
+            offset = parse(Int, offset.match)
+            rd = match(r"\(([^)]+)\)", parts[3])
+            rd = rd.captures[1][2:end]
+            rd = parse(Int, rd)+1
+            imm = int_to_signed_12bit_bin(offset)
+            S_format_instruction = imm[1:7]*int_to_5bit_bin(rs-1)*int_to_5bit_bin(rd-1)*"010"*imm[8:12]*S_format_instruction
+            row = div(core.registers[rd] + offset + 1, 4) + 1
+            col = (core.registers[rd]+offset+1)%4
+            if col==0
+                col=4
+                row-=1
+            end
+            bin = string(core.registers[rs], base=2, pad=32) 
+            in_memory_place_word(memory,memory_index,1,S_format_instruction)
+
+
+
+        #====================================================================================================================
+                                                B Format Instructions          ( Branch Format )
+        ====================================================================================================================#
+
+        #23    #BEQ  rs1 rs2 label
+        #BEQ  rs1 rs2 offset
+        elseif opcode == "BEQ"
+            rs1 = parse(Int, parts[2][2:end])+1
+            rs2 = parse(Int, parts[3][2:end])+1
+            label = parts[4]
+            index = findfirst(x -> x == label,core.program)+1
+            offset = index - core.pc
+            #offset = parse(Int, parts[4]) 
+            imm = int_to_signed_12bit_bin(offset)
+            imm = '0'*imm[1:11]
+            B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"000"*imm[9:12]*imm[2]*B_format_instruction
+            in_memory_place_word(memory,memory_index,1,B_format_instruction)
+
+        #24    #BNE  rs1 rs2 label
+        #BNE  rs1 rs2 offset
+        elseif opcode == "BNE"
+            rs1 = parse(Int, parts[2][2:end])+1
+            rs2 = parse(Int, parts[3][2:end])+1
+            label = parts[4]
+            #offset = parse(Int, parts[4]) 
+            #imm = int_to_signed_12bit_bin(offset)
+            #imm = '0'*imm[1:11]
+            #B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"001"*imm[9:12]*imm[2]*B_format_instruction
+            if core.registers[rs1] != core.registers[rs2]
+                core.pc = findfirst(x -> x == label,core.program) 
+            else 
+                core.pc = core.pc
+            end
+
+        #25    #BLT  rs1 rs2 label
+        #BLT  rs1 rs2 offset
+        elseif opcode == "BLT"
+            rs1 = parse(Int, parts[2][2:end])+1
+            rs2 = parse(Int, parts[3][2:end])+1
+            label = parts[4]
+            #offset = parse(Int, parts[4]) 
+            #imm = int_to_signed_12bit_bin(offset)
+            #imm = '0'*imm[1:11]
+            #B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"100"*imm[9:12]*imm[2]*B_format_instruction
+            if core.registers[rs1] < core.registers[rs2]
+                core.pc = findfirst(x -> x == label,core.program) 
+            else 
+                core.pc = core.pc
+            end
+
+        #25    #BGT  rs1 rs2 label
+        #BLT  rs1 rs2 offset
+        elseif opcode == "BGT"
+            rs1 = parse(Int, parts[2][2:end])+1
+            rs2 = parse(Int, parts[3][2:end])+1
+            label = parts[4]
+            #offset = parse(Int, parts[4]) 
+            #imm = int_to_signed_12bit_bin(offset)
+            #imm = '0'*imm[1:11]
+            #B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"100"*imm[9:12]*imm[2]*B_format_instruction
+            if (core.registers[rs1])>(core.registers[rs2])
+                core.pc = findfirst(x -> x == label,core.program) 
+            else 
+                core.pc = core.pc
+            end
+
+        #26    #BGE  rs1 rs2 offset
+        elseif opcode == "BGE"
+            rs1 = parse(Int, parts[2][2:end])+1
+            rs2 = parse(Int, parts[3][2:end])+1
+            offset = parse(Int, parts[4]) 
+            imm = int_to_signed_12bit_bin(offset)
+            imm = '0'*imm[1:11]
+            B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"101"*imm[9:12]*imm[2]*B_format_instruction
+            if core.registers[rs1] > core.registers[rs2]
+                core.pc = findfirst(x -> x == label,core.program) 
+            else 
+                core.pc = core.pc
+            end
+
+        #27    #BLTU  rs1 rs2 offset
+        elseif opcode == "BLTU"
+            rs1 = parse(Int, parts[2][2:end])+1
+            rs2 = parse(Int, parts[3][2:end])+1
+            offset = parse(Int, parts[4]) 
+            imm = int_to_signed_12bit_bin(offset)
+            imm = '0'*imm[1:11]
+            B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"110"*imm[9:12]*imm[2]*B_format_instruction
+            #Function has to be written after Memory 2d Array is formed
+
+        #28    #BGEU  rs1 rs2 offset
+        elseif opcode == "BGEU"
+            rs1 = parse(Int, parts[2][2:end])+1
+            rs2 = parse(Int, parts[3][2:end])+1
+            offset = parse(Int, parts[4]) 
+            imm = int_to_signed_12bit_bin(offset)
+            imm = '0'*imm[1:11]
+            B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"111"*imm[9:12]*imm[2]*B_format_instruction
+            #Function has to be written after Memory 2d Array is formed
+
+            
+        #====================================================================================================================
+                                                U Format Instructions          ( Upper Immediate Format )
+        ====================================================================================================================#
+
+        #29     #LUI rd, imm    #Load Upper immediate #Loads the immediate value imm into the upper 20 bits of register rd and sets the lower 12 bits to 0.
+        elseif opcode == "LUI"
+            rd = parse(Int, parts[2][2:end])+1
+            imm_value = parse(Int, parts[3])      #Immediate value
+            imm_value = int_to_20bit_bin(imm_value)
+            U_format_instruction=imm_value*int_to_5bit_bin(rd-1)*U_format_instruction
+            core.registers[rd] =  imm_value
+            #Function has to be written after Memory 2d Array is formed
+
+
+        #====================================================================================================================
+                                                J Format Instructions          ( Jump Format )
+        ====================================================================================================================#
+
+        #30     #JAL rd,label
+            #JAL rd, offset
+            rd = parse(Int, parts[2][2:end])+1
+            offset = parse(Int, parts[3])        
+            offset = int_to_20bit_bin(offset)
+            core.registers[rd] = core.pc+1
+            core.pc = findfirst(x -> x == label,core.program)+1
+            #core.pc=core.pc+offset
+            JAL_format_instruction=imm[1]*imm[11:19]*imm[10]*imm[2:9]*int_to_5bit_bin(rd-1)*JAL_format_instruction
+            #Function has to be written after Memory 2d Array is formed
+
+        #31     #JALR rd
+            #JALR rd, rs, offset
+            rd = parse(Int, parts[2][2:end])+1
+            #rs = parse(Int, parts[3][2:end])+1
+            #offset = parse(Int, parts[4])      
+            core.pc = core.registers[rd]
+            #JALR_format_instruction=imm[1]*imm[11:19]*imm[10]*imm[2:9]*int_to_5bit_bin(rd-1)*JALR_format_instruction
+
+        #30        #J Label
+        elseif opcode == "J"
+            label = parts[2]
+            core.pc = findfirst(x -> x == label,core.program)
+
+        else
+                memory_index -= 1   
+                println("ran ",opcode)
         end
+        println(core.pc," ",opcode)
         core.pc+=1
-        initial_index+=1
+        memory_index+=1
     end
-    return initial_index
+    temp=core.pc
+    core.pc = initial_index
+    return temp
 end

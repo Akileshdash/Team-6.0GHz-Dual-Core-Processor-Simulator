@@ -34,7 +34,7 @@ end
 
 function show(proc::Processor)
     println("Processor Memory (in hex):")
-    rows_to_show = min(10, size(proc.memory, 1))  # Choose the minimum of 10 and the actual number of rows
+    rows_to_show = min(15, size(proc.memory, 1))  # Choose the minimum of 10 and the actual number of rows
     for row in reverse(1:rows_to_show)
         combined_value = UInt32(0)
         print("$row -> ")

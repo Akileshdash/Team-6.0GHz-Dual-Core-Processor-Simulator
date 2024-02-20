@@ -9,6 +9,10 @@ size:   .word 20                # Size of the array
 ADD x5,x6,x7
 SUB x5,x6,x7
 SLL x5,x6,x7
+BEQ x0,x0,swap
+XOR x5,x6,x7
+SRL x5,x6,x7
+swap:
 XOR x5,x6,x7
 SRL x5,x6,x7
 SRA x5,x6,x7

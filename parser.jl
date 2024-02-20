@@ -101,7 +101,7 @@ function data_inst_parser(data_instructions::Vector{String})
         #println(mutable_str, "\t", final_str)
     end
     
-    println(data_instructions_2)
+    #println(data_instructions_2)
 
     label_array = []
     

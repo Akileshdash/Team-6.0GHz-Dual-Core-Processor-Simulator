@@ -14,3 +14,6 @@ SRL x15,x16,x17
 SRA x15,x16,x17
 OR x15,x16,x17
 AND x15,x16,x17
+SRA x15,x16,x17
+OR x15,x16,x17
+AND x15,x16,x17
