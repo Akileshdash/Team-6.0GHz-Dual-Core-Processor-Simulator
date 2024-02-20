@@ -1,13 +1,13 @@
 function replace_commas_with_spaces(input_string::String)
-    return replace(input_string, ',' => ' ')
+    return replace(input_string, "," => " ")
 end
 
 function replace_colon_with_space(input_string::String)
-    return replace(input_string, ':' => ' ')
+    return replace(input_string, ":" => "")
 end
 
 function replace_d_quotes_with_space(input_string::String)
-    return replace(input_string, '"' => ' ')
+    return replace(input_string, "\"" => "")
 end
 
 function parse_assembly(file_path::String)
@@ -69,14 +69,87 @@ end
 
 #-----------------------------------------------------------
 
-#= to be executed in the main file
+#========================================================
+            Text Instruction Parsing
+========================================================#
 
-for i in eachindex(text_instructions)
-    mutable_str = String(text_instructions[i])
-    modified_str = replace_commas_with_spaces(mutable_str)
-    final_str = replace_colon_with_space(modified_str)
-    push!(sim.cores[1].program, final_str)
-    println(modified_str, "  ", final_str)
+function text_inst_parser(text_instructions::Vector{String})
+    list = []
+    for i in eachindex(text_instructions)
+        mutable_str = String(text_instructions[i])
+        modified_str = replace_commas_with_spaces(mutable_str)
+        final_str = replace_colon_with_space(modified_str)
+        push!(list, final_str)
+        #println(modified_str, "  ", final_str)
+    end
+
+    return list
 end
 
-=#
+#========================================================
+            Data Instruction Parsing
+========================================================#
+
+function data_inst_parser(data_instructions::Vector{String})
+    list = []
+    data_instructions_2 = []
+    for i in eachindex(data_instructions)
+        mutable_str = String(data_instructions[i])
+        modified_str = replace_commas_with_spaces(mutable_str)
+        final_str = replace_colon_with_space(modified_str)
+        push!(data_instructions_2, final_str)
+        #println(mutable_str, "\t", final_str)
+    end
+    
+    println(data_instructions_2)
+
+    label_array = []
+    
+    for i in eachindex(data_instructions_2)
+        if occursin(".word", data_instructions_2[i])
+            split_list = split(data_instructions_2[i], ".word")
+            for j in eachindex(split_list)
+                if split_list[j] == ""
+                    continue
+                end
+                if j == 1
+                    push!(label_array, strip(split_list[j]))
+                    push!(list, strip(split_list[j]))
+                    push!(list, ".word")
+                    continue
+                end
+                
+                new_split_list = split(split_list[j], " ")
+                for k in eachindex(new_split_list)
+                    if new_split_list[k] == ""
+                        continue
+                    end
+                    push!(list, new_split_list[k])
+                end
+            end
+        end
+    
+        if occursin(".string", data_instructions_2[i])
+            split_list = split(data_instructions_2[i], ".string")
+            for j in eachindex(split_list)
+                if split_list[j] == ""
+                    continue
+                end
+                if j == 1
+                    push!(label_array, strip(split_list[j]))
+                    push!(list, strip(split_list[j]))
+                    push!(list, ".string")
+                    continue
+                end
+                temp_str = String(split_list[j])
+                final_str = replace_d_quotes_with_space(temp_str)
+                push!(list, final_str)
+                
+            end
+        end
+    end
+
+    return list, label_array
+end
+
+
