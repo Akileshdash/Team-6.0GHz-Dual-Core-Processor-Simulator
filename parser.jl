@@ -10,6 +10,10 @@ function replace_d_quotes_with_space(input_string::String)
     return replace(input_string, "\"" => "")
 end
 
+function replace_wrong_nline_with_right_nline(input_string::String)
+    return replace(input_string, "\\n" => "\n")
+end
+
 function parse_assembly(file_path::String)
     text_instructions = String[]
     data_instructions = String[]
@@ -101,7 +105,7 @@ function data_inst_parser(data_instructions::Vector{String})
         #println(mutable_str, "\t", final_str)
     end
     
-    #println(data_instructions_2)
+    println(data_instructions_2)
 
     label_array = []
     
@@ -143,7 +147,7 @@ function data_inst_parser(data_instructions::Vector{String})
                 end
                 temp_str = String(split_list[j])
                 final_str = replace_d_quotes_with_space(temp_str)
-                push!(list, final_str)
+                push!(list, replace_wrong_nline_with_right_nline(final_str))
                 
             end
         end
