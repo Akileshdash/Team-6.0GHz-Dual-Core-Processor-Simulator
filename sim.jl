@@ -1,25 +1,12 @@
 include("Execute_Func.jl")
 include("parser.jl")
 
-mutable struct Core1
-    # Define Core properties here
-    id::Int
-    registers::Array{Int, 1}
-    pc::Int
-    program::Array{String, 1}
-end
 
 function core_Init(id)
     registers = fill(0, 32)
     pc = 1
     program = []
     return Core1(id,registers, pc, program)
-end
-
-mutable struct Processor
-    memory::Array{UInt8,2}
-    clock::Int
-    cores::Array{Core1,1}
 end
 
 function processor_Init()
@@ -29,13 +16,11 @@ function processor_Init()
     return Processor(memory, clock, cores)
 end
 
-function run(processor::Processor)
-    encoding_Instructions(processor.cores[1],processor.memory)
-    while processor.cores[1].pc<=length(processor.cores[1].program)                      
-        execute(processor.cores[1],processor.memory)
-    end
-end
+# function run(processor::Processor)
+#     #encoding_Instructions(processor.cores[1],processor.memory)
+#     while processor.cores[1].pc<=length(processor.cores[1].program)                      
+#         execute(processor.cores[1],processor.memory)
+#     end
+# end
 
-
-sim = processor_Init()  
 

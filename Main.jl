@@ -3,9 +3,12 @@
 
 include("sim.jl")
 
-file_path = "./Bubble_Sort.asm"
+file_path = "./test.asm"
+
 text_instructions,data_instructions = parse_assembly(file_path)
 
+sim = processor_Init()  
+#in text instruct , commas,colon and spaces are removed
 for i in eachindex(text_instructions)
     mutable_str = String(text_instructions[i])
     modified_str = replace_commas_with_spaces(mutable_str)
@@ -13,28 +16,30 @@ for i in eachindex(text_instructions)
     push!(sim.cores[1].program, final_str)
     #println(modified_str, "  ", final_str)
 end
-println(sim.cores[1].program)
-#show(sim)
-run(sim)
-#show(sim)
-for i in 1:2
-    println(sim.cores[i].registers)
-end
+encoding_Instructions(sim.cores[1],sim.memory)
 
+#println(sim.cores[1].program)
+#show(sim)
+#run(sim)
+#show(sim)
+# for i in 1:2
+#     println(sim.cores[i].registers)
+# end
 
-println(data_instructions)
+#=
+#println(data_instructions)
 data_instructions_2 = []
 
-
+#in data instruct , commas,colon and spaces are removed
 for i in eachindex(data_instructions)
     mutable_str = String(data_instructions[i])
     modified_str = replace_commas_with_spaces(mutable_str)
     final_str = replace_colon_with_space(modified_str)
     push!(data_instructions_2, final_str)
-    println(mutable_str, "\t", final_str)
+    #println(mutable_str, "\t", final_str)
 end
 
-println(sim.cores[2].id)
+#println(sim.cores[2].id)
 
 println(data_instructions_2)
 
@@ -90,7 +95,4 @@ println(data_inst_diss)
 println("------")
 println(label_array)
 
-function int_to_binary_string(num::Int)
-    return bin(num)[3:end]
-end
-
+=#

@@ -1,3 +1,16 @@
+mutable struct Core1
+    id::Int
+    registers::Array{Int, 1}
+    pc::Int
+    program::Array{String, 1}
+end
+
+mutable struct Processor
+    memory::Array{UInt8,2}
+    clock::Int
+    cores::Array{Core1,1}
+end
+
 function int_to_5bit_bin(n::Int)
     binary_str = string(n, base=2, pad=5)
     
