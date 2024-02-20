@@ -2,7 +2,6 @@
 #So it is enough to just include sim.jl
 
 include("sim.jl")
-include("parser.jl")
 
 file_path = "./test.asm"
 text_instructions,data_instructions = parse_assembly(file_path)
@@ -15,9 +14,9 @@ for i in eachindex(text_instructions)
     #println(modified_str, "  ", final_str)
 end
 println(sim.cores[1].program)
-show(sim)
+#show(sim)
 run(sim)
-show(sim)
+#show(sim)
 for i in 1:2
     println(sim.cores[i].registers)
 end
