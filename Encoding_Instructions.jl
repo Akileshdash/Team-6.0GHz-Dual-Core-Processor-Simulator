@@ -167,7 +167,7 @@ function encoding_Instructions(core::Core1, memory,initial_index,label_array)
             rd = parse(Int, parts[2][2:end])+1
             rs = parse(Int, parts[3][2:end])+1
             #I_format_instruction = int_to_signed_12bit_bin(0)*int_to_5bit_bin(rs-1)*"000"*int_to_5bit_bin(rd-1)*I_format_instruction
-            I_format_instruction = int_to_signed_12bit_bin(0)*int_to_5bit_bin(rs1-1)*"111"*int_to_5bit_bin(rd-1)*I_format_instruction
+            I_format_instruction = int_to_signed_12bit_bin(0)*int_to_5bit_bin(rs-1)*"000"*int_to_5bit_bin(rd-1)*I_format_instruction
             in_memory_place_word(memory,memory_index,1,I_format_instruction)
 
 
@@ -302,10 +302,8 @@ function encoding_Instructions(core::Core1, memory,initial_index,label_array)
             rs2 = parse(Int, parts[3][2:end])+1
             label = parts[4]
             index = findfirst(x -> x == label,core.program)+1
-            offset = index - core.pc
-            #offset = parse(Int, parts[4]) 
-            imm = int_to_signed_12bit_bin(offset)
-            imm = '0'*imm[1:11]
+            offset = 4*(index - core.pc-1)         #Offset is in bytes
+            imm = "0"*int_to_signed_12bit_bin(offset)
             B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"000"*imm[9:12]*imm[2]*B_format_instruction
             in_memory_place_word(memory,memory_index,1,B_format_instruction)
 
@@ -315,15 +313,11 @@ function encoding_Instructions(core::Core1, memory,initial_index,label_array)
             rs1 = parse(Int, parts[2][2:end])+1
             rs2 = parse(Int, parts[3][2:end])+1
             label = parts[4]
-            #offset = parse(Int, parts[4]) 
-            #imm = int_to_signed_12bit_bin(offset)
-            #imm = '0'*imm[1:11]
-            #B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"001"*imm[9:12]*imm[2]*B_format_instruction
-            if core.registers[rs1] != core.registers[rs2]
-                core.pc = findfirst(x -> x == label,core.program) 
-            else 
-                core.pc = core.pc
-            end
+            index = findfirst(x -> x == label,core.program)+1
+            offset = 4*(index - core.pc-1)         #Offset is in bytes
+            imm = "0"*int_to_signed_12bit_bin(offset)
+            B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"001"*imm[9:12]*imm[2]*B_format_instruction
+            in_memory_place_word(memory,memory_index,1,B_format_instruction)
 
         #25    #BLT  rs1 rs2 label
         #BLT  rs1 rs2 offset
@@ -331,15 +325,11 @@ function encoding_Instructions(core::Core1, memory,initial_index,label_array)
             rs1 = parse(Int, parts[2][2:end])+1
             rs2 = parse(Int, parts[3][2:end])+1
             label = parts[4]
-            #offset = parse(Int, parts[4]) 
-            #imm = int_to_signed_12bit_bin(offset)
-            #imm = '0'*imm[1:11]
-            #B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"100"*imm[9:12]*imm[2]*B_format_instruction
-            if core.registers[rs1] < core.registers[rs2]
-                core.pc = findfirst(x -> x == label,core.program) 
-            else 
-                core.pc = core.pc
-            end
+            index = findfirst(x -> x == label,core.program)+1
+            offset = 4*(index - core.pc-1)         #Offset is in bytes
+            imm = "0"*int_to_signed_12bit_bin(offset)
+            B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"100"*imm[9:12]*imm[2]*B_format_instruction
+            in_memory_place_word(memory,memory_index,1,B_format_instruction)
 
         #25    #BGT  rs1 rs2 label
         #BLT  rs1 rs2 offset
@@ -347,29 +337,22 @@ function encoding_Instructions(core::Core1, memory,initial_index,label_array)
             rs1 = parse(Int, parts[2][2:end])+1
             rs2 = parse(Int, parts[3][2:end])+1
             label = parts[4]
-            #offset = parse(Int, parts[4]) 
-            #imm = int_to_signed_12bit_bin(offset)
-            #imm = '0'*imm[1:11]
-            #B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"100"*imm[9:12]*imm[2]*B_format_instruction
-            if (core.registers[rs1])>(core.registers[rs2])
-                core.pc = findfirst(x -> x == label,core.program) 
-            else 
-                core.pc = core.pc
-            end
+            index = findfirst(x -> x == label,core.program)+1
+            offset = 4*(index - core.pc-1)         #Offset is in bytes
+            imm = "0"*int_to_signed_12bit_bin(offset)
+            B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"100"*imm[9:12]*imm[2]*B_format_instruction
+            in_memory_place_word(memory,memory_index,1,B_format_instruction)
 
         #26    #BGE  rs1 rs2 offset
         elseif opcode == "BGE"
             rs1 = parse(Int, parts[2][2:end])+1
             rs2 = parse(Int, parts[3][2:end])+1
             offset = parse(Int, parts[4]) 
-            imm = int_to_signed_12bit_bin(offset)
-            imm = '0'*imm[1:11]
+            index = findfirst(x -> x == label,core.program)+1
+            offset = 4*(index - core.pc-1)         #Offset is in bytes
+            imm = "0"*int_to_signed_12bit_bin(offset)
             B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"101"*imm[9:12]*imm[2]*B_format_instruction
-            if core.registers[rs1] > core.registers[rs2]
-                core.pc = findfirst(x -> x == label,core.program) 
-            else 
-                core.pc = core.pc
-            end
+            in_memory_place_word(memory,memory_index,1,B_format_instruction)
 
         #27    #BLTU  rs1 rs2 offset
         elseif opcode == "BLTU"
@@ -412,17 +395,20 @@ function encoding_Instructions(core::Core1, memory,initial_index,label_array)
 
         #30     #JAL rd,label
             #JAL rd, offset
+        elseif opcode == "JAL"
             rd = parse(Int, parts[2][2:end])+1
-            offset = parse(Int, parts[3])        
-            offset = int_to_20bit_bin(offset)
-            core.registers[rd] = core.pc+1
-            core.pc = findfirst(x -> x == label,core.program)+1
-            #core.pc=core.pc+offset
+            label = parts[3]
+            println(label)
+            index = findfirst(x -> x == label,core.program)+1
+            offset = 4*(index - core.pc-1)         #Offset is in bytes
+            imm = int_to_32bit_bin(offset)
             JAL_format_instruction=imm[1]*imm[11:19]*imm[10]*imm[2:9]*int_to_5bit_bin(rd-1)*JAL_format_instruction
-            #Function has to be written after Memory 2d Array is formed
+            println(length(JAL_format_instruction))
+            #in_memory_place_word(memory,memory_index,1,JAL_format_instruction)
 
         #31     #JALR rd
             #JALR rd, rs, offset
+        elseif opcode == "JALR"
             rd = parse(Int, parts[2][2:end])+1
             #rs = parse(Int, parts[3][2:end])+1
             #offset = parse(Int, parts[4])      
@@ -436,9 +422,8 @@ function encoding_Instructions(core::Core1, memory,initial_index,label_array)
 
         else
                 memory_index -= 1   
-                println("ran ",opcode)
+                println("came to  ",memory_index+1)
         end
-        println(core.pc," ",opcode)
         core.pc+=1
         memory_index+=1
     end

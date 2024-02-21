@@ -27,6 +27,12 @@ function int_to_20bit_bin(n::Int)
     return binary_str
 end
 
+function int_to_32bit_bin(n::Int)
+    binary_str_20bit = string(n + 2^20, base=2)[2:end]
+    binary_str_32bit = string("0" ^ (32 - length(binary_str_20bit)), binary_str_20bit)
+    return binary_str_32bit
+end
+
 function show_hex(value)
     hex_str = string(value, base=16)
     return lpad(hex_str, 2, '0')
