@@ -40,3 +40,8 @@ show(sim)
 
 #println(sim.cores[1].pc)
 #println(sim.cores[2].pc)
+
+
+alloc_dataSeg_in_memory(sim.memory, data_inst_final, sim.cores[1], variable_array)
+println("----------------------------")
+show(sim)
