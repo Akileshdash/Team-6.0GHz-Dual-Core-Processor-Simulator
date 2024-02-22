@@ -2,6 +2,9 @@
 #So it is enough to just include sim.jl
 
 include("sim.jl")
+include("allocating_data_seg_in_mem.jl")
+include("Helper_Functions.jl")
+
 file_path_1 = "./test_core1.asm"
 file_path_2 = "./test_core2.asm"
 
