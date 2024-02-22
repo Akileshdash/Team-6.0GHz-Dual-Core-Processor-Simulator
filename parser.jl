@@ -147,7 +147,7 @@ function data_inst_parser(data_instructions::Vector{String})
                 end
                 temp_str = String(split_list[j])
                 final_str = replace_d_quotes_with_space(temp_str)
-                push!(list, replace_wrong_nline_with_right_nline(final_str))
+                push!(list, lstrip(replace_wrong_nline_with_right_nline(final_str)))
                 
             end
         end
