@@ -16,11 +16,10 @@ function processor_Init()
     return Processor(memory, clock, cores)
 end
 
-# function run(processor::Processor)
-#     #encoding_Instructions(processor.cores[1],processor.memory)
-#     while processor.cores[1].pc<=length(processor.cores[1].program)                      
-#         execute(processor.cores[1],processor.memory)
-#     end
-# end
+function run(processor::Processor)
+    while processor.cores[1].pc<=length(processor.cores[1].program)                      
+        Decode_and_execute(processor.cores[1],processor.memory)
+    end
+end
 
 

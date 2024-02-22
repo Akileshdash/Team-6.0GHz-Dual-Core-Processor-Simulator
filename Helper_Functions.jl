@@ -1,5 +1,20 @@
 operator_array = ["add","sub","sll","xor","srl","sra","or","and","addi","xori","ori","andi","slli","srli","srai","li","andi","mv","lb","lh","lw","lbu","lhu","sb","sh","sw","beq","bne","blt","bgt","bge","bltu","bgeu","lui","jal","jalr","j",]
 
+
+mutable struct Core1
+    id::Int
+    registers::Array{Int, 1}
+    pc::Int
+    program::Array{String, 1}
+end
+
+mutable struct Processor
+    memory::Array{UInt8,2}
+    clock::Int
+    cores::Array{Core1,1}
+end
+
+
 function find_index_for_label(label_array, label)
     for row in label_array
         if row[1] == label
@@ -20,19 +35,6 @@ function find_and_remove(search_string, string_array)
         removed_element = popat!(string_array, index)
         return index
     end
-end
-
-mutable struct Core1
-    id::Int
-    registers::Array{Int, 1}
-    pc::Int
-    program::Array{String, 1}
-end
-
-mutable struct Processor
-    memory::Array{UInt8,2}
-    clock::Int
-    cores::Array{Core1,1}
 end
 
 function int_to_5bit_bin(n::Int)
