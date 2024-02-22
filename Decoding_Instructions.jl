@@ -11,7 +11,6 @@ function Decode_and_execute(core::Core1,memory)
             break
         end
     end
-    println(core.pc," ",instruction_type)
     if instruction_type=="R"
         # Chosen Instruction is R
         rd = parse(Int,Instruction_to_decode[end-11:end-7], base=2)+1
@@ -43,9 +42,7 @@ function Decode_and_execute(core::Core1,memory)
         Execute_Operation_I(operator,rd,rs1,imm_value,core,memory,Instruction_to_decode)
 
     elseif instruction_type=="L"
-        println("Chosen Instruction is L")
     elseif instruction_type=="S"
-        println("Chosen Instruction is S")
     elseif instruction_type=="B"
         # Chosen Instruction is B
         rs1 = parse(Int,Instruction_to_decode[13:17], base=2)+1
@@ -59,29 +56,23 @@ function Decode_and_execute(core::Core1,memory)
                 break
             end
         end
-        #println(operator," x",rs1," x",rs2," ",bin_string_to_signed_int(imm_value))
         Execute_Operation_B(operator,rs1,rs2,offset,core,memory,Instruction_to_decode)
 
     elseif instruction_type=="U"
-        #println("Chosen Instruction is U")
     elseif instruction_type=="JAL"
         # Chosen Instruction is JAL
         rd = parse(Int,Instruction_to_decode[end-11:end-7], base=2)+1
         offset = bin_string_to_signed_int(Instruction_to_decode[1]*Instruction_to_decode[13:20]*Instruction_to_decode[12]*Instruction_to_decode[2:11])
         core.registers[rd] = core.pc + 1
         core.registers[1] = 0
-        println("JAL : current pc : ",core.pc," offset = ",offset)
         core.pc = core.pc + offset - 1
-        #println(" going to jump to pc : ",core.pc)
     elseif instruction_type=="JALR"
         # Chosen Instruction is JALR
         rd = parse(Int,Instruction_to_decode[end-11:end-7], base=2)+1
         offset = bin_string_to_signed_int(Instruction_to_decode[1:12])
         rs = parse(Int,Instruction_to_decode[13:17], base=2)+1
         core.registers[rd] = core.pc + 1 
-        #println("rd = ",rd-1," rs = ",rs-1," offset = ",offset)
         core.pc = core.registers[rs] + offset - 1
-        #println("JALR : pc to go ",core.registers[rs] + offset )
     end
     core.pc+=1
 end

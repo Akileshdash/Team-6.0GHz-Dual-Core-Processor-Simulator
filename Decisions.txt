@@ -6,3 +6,6 @@
                 . 0 : Memory is currently unused by neither core
                 . 1 : Memory can be accessed by only core 1
                 . 2 : Memory can be accessed by only core 2
+
+    . Data Segment
+        . For Core 1 starting from row 513

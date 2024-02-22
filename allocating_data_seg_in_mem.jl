@@ -2,21 +2,14 @@ include("sim.jl")
 include("string_to_binaryString.jl")
 
 function binary_to_uint8(binary::String)
-    if length(binary) != 8
-        throw(ArgumentError("Input binary string must be 8 bits long"))
-    end
-    
     result = 0
     for (i, bit) in enumerate(reverse(binary))
         if bit == '1'
             result += 2^(i-1)
-        elseif bit != '0'
-            throw(ArgumentError("Input binary string must contain only '0's and '1's"))
         end
     end
     return result
 end
-
 
 function mem_pc_to_row(mem_pc::Int)
     row = mem_pc/4
@@ -49,7 +42,7 @@ end
 
 function alloc_dataSeg_in_memory(memory::Array{UInt8,2}, data_inst_final::Vector{Any}, core::Core1, variable_array::Vector{Any})
     
-    variable_add_arr = []
+    variable_address_array = []
     mem_pc, row, col = get_loc_vars(core.id)
 
     string_flag = false
@@ -70,8 +63,8 @@ function alloc_dataSeg_in_memory(memory::Array{UInt8,2}, data_inst_final::Vector
         end
 
         if str in variable_array
-            println("found ", str)
-            push!(variable_add_arr, mem_pc)
+            #println("found ", str)
+            push!(variable_address_array, mem_pc)
             continue
         end
 
@@ -81,7 +74,7 @@ function alloc_dataSeg_in_memory(memory::Array{UInt8,2}, data_inst_final::Vector
             println(str, " ", binary_of_str_array)
 
             for k in eachindex(binary_of_str_array)
-                println(k, " ", binary_to_uint8(binary_of_str_array[k]), " ", str)
+                #println(k, " ", binary_to_uint8(binary_of_str_array[k]), " ", str)
                 memory[mem_pc_to_row(mem_pc),mem_pc_to_col(mem_pc)] = binary_to_uint8(binary_of_str_array[k])
                 #parse(UInt8, binary_of_str_array[i])
                 mem_pc += 1
@@ -100,6 +93,5 @@ function alloc_dataSeg_in_memory(memory::Array{UInt8,2}, data_inst_final::Vector
     end
 
     # print(binary_of)
-    
-
+    return variable_address_array
 end

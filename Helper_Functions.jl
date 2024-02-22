@@ -122,26 +122,29 @@ function show_hex(value)
     return lpad(hex_str, 2, '0')
 end
 
-# function show(proc::Processor)
-#     println("Processor Memory (in hex):")
-#     # rows_to_show = min(15, size(proc.memory, 1))  # Choose the minimum of 10 and the actual number of rows
-#     rows_to_show = min(550, 550)
-#     for row in reverse(510:rows_to_show)
-#         combined_value = UInt32(0)
-#         print("$row -> ")
-#         for col in 1:size(proc.memory, 2)
-#             print("0x$(show_hex(proc.memory[row, col]))\t")
-#             if col % 4 == 0
-#                 println()
-#             end
-#         end
-#     end
-# end
-
 function show(proc::Processor)
     println("Processor Memory (in hex):")
     rows_to_show = min(11, size(proc.memory, 1))  # Choose the minimum of 10 and the actual number of rows
     for row in reverse(1:rows_to_show)
+        combined_value = UInt32(0)
+        print("$row -> ")
+        for col in 1:size(proc.memory, 2)
+            print("0x$(show_hex(proc.memory[row, col]))\t")
+            if col % 4 == 0
+                println()
+            end
+        end
+    end
+end
+
+function show(proc::Processor, start_row::Int, end_row::Int)
+    println("Processor Memory (in hex):")
+    
+    # Ensure start_row and end_row are within the valid range
+    start_row = max(1, start_row)
+    end_row = min(size(proc.memory, 1), end_row)
+    
+    for row in reverse(start_row:end_row)
         combined_value = UInt32(0)
         print("$row -> ")
         for col in 1:size(proc.memory, 2)
@@ -161,14 +164,6 @@ function bin_string_to_signed_int(bin_str::AbstractString)
     end
     return decimal_value
 end
-
-
-
-
-# function show_hex(value)
-#     hex_str = string(value, base=16)
-#     return lpad(hex_str, 8, '0')
-# end
 
 #This function extracts the entire word, i.e. 32 bits from the initial index
 #considering Big Endian
