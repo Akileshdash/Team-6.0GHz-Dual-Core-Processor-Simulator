@@ -411,36 +411,44 @@ function encoding_Instructions(core::Core1, memory,initial_index,variable_array,
             rd = parse(Int, parts[2][2:end])+1
             label = parts[3]
             index = find_index_for_label(label_array,label)
-            offset = 4*(index - core.pc)         #Offset is in bytes
-            #imm = int_to_32bit_bin(offset)
-            imm = int_to_signed_32bit_bin(offset)
-            #sub from 32
-            JAL_format_instruction=imm[12]*imm[22:31]*imm[21]*imm[13:20]*int_to_5bit_bin(rd-1)*JAL_format_instruction
+            offset = (index - core.pc)         #Offset is in bytes
+            imm = int_to_signed_20bit_bin_string(offset)
+            str = imm[1]*imm[11:end]*imm[10]*imm[2:9]
+            JAL_format_instruction=imm[1]*imm[11:20]*imm[10]*imm[2:9]*int_to_5bit_bin(rd-1)*JAL_format_instruction
             in_memory_place_word(memory,memory_index,1,JAL_format_instruction)
-
-        #31     #JALR rs
-            #JALR rd, rs, offset
-        elseif opcode == "JALR"
-            rs = parse(Int, parts[2][2:end])
-            rd = 1
-            offset = 0
-            imm = int_to_signed_12bit_bin(offset)
-            JALR_format_instruction=imm*int_to_5bit_bin(rs)*"000"*int_to_5bit_bin(rd)*JALR_format_instruction
-            in_memory_place_word(memory,memory_index,1,JALR_format_instruction)
-
-        #30        #J Label
-        #same as #JAL x0,label
+       
+        #30     #J Label
+            #same as #JAL x0,label
         elseif opcode == "J"
             label = parts[2]
             rd = 0
             index = find_index_for_label(label_array,label)
-            offset = 4*(index - core.pc)         #Offset is in bytes
-            #println("index = ",index," label = ",label," core pc = ",core.pc)
-            imm = int_to_signed_32bit_bin(offset)
-            #sub from 32
-            JAL_format_instruction=imm[12]*imm[22:31]*imm[21]*imm[13:20]*int_to_5bit_bin(rd)*JAL_format_instruction
+            offset  = (index - core.pc)         #Offset is in bytes
+            imm = int_to_signed_20bit_bin_string(offset)
+            JAL_format_instruction=imm[1]*imm[11:20]*imm[10]*imm[2:9]*"00000"*JAL_format_instruction
             in_memory_place_word(memory,memory_index,1,JAL_format_instruction)
 
+        #31     #JALR rs        # store in x1 core.pc+1
+            #JALR rd, rs, offset
+        elseif opcode == "JALR"
+            println(parts)
+            println(length(parts))
+            if length(parts)==2
+                rs = parse(Int, parts[2][2:end])
+                rd = 1
+                offset = 0
+                imm = int_to_signed_12bit_bin(offset)
+                JALR_format_instruction=imm*int_to_5bit_bin(rs)*"000"*int_to_5bit_bin(rd)*JALR_format_instruction
+            elseif length(parts)>2
+                rd = parse(Int, parts[2][2:end])
+                rs = parse(Int, parts[3][2:end])
+                offset = parse(Int, parts[4])
+                imm = int_to_signed_12bit_bin(offset)
+                JALR_format_instruction=imm*int_to_5bit_bin(rs)*"000"*int_to_5bit_bin(rd)*JALR_format_instruction
+            end
+            in_memory_place_word(memory,memory_index,1,JALR_format_instruction)
+
+        
         else
                 memory_index -= 1   
         end
@@ -452,5 +460,3 @@ function encoding_Instructions(core::Core1, memory,initial_index,variable_array,
     return temp
 end
 
-
-11111110000111111111000001101111

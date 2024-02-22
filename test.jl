@@ -1,14 +1,13 @@
-
-function find_index_for_label(label_array, label)
-    for row in label_array
-        if row[1] == label
-            return row[2]
-        end
+function int_to_signed_20bit_bin_string(value::Int)
+    if value < 0
+        value += 2^20
     end
-    return nothing  # Return nothing if the string is not found
+    bin_str = string(value, base=2)
+    bin_str = string("0"^(20 - length(bin_str)), bin_str)
+    return bin_str
 end
 
-label_array = [("print",8),("print1",8),("print2",8)]
-label = "print1"
-
-println(find_index_for_label(label_array,label))
+# Example usage:
+integer_value = 5  # Replace this with your integer value
+bin_string = int_to_signed_20bit_bin_string(integer_value)
+println(bin_string)

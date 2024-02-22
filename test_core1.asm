@@ -1,12 +1,9 @@
 .text
+    li x30,20
+    li x31,20
+    j exit
+    li x1,1
+    li x2,2
 
-li x1,1
-blt x0,x1,one
-bne x0,x1,zero
-
-one:
-    mv x0,x1
-
-zero:
-    mv x1,x0
-    bne x0,x1,one
+    exit:
+    li x31,100

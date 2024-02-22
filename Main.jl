@@ -23,10 +23,6 @@ end
 
 sim.cores[1].program = final_text_inst
 
-# for row in sim.cores[1].program
-#     println(" ",row)
-# end
-# println(label_array)
 
 initial_index = encoding_Instructions(sim.cores[1],sim.memory,initial_index,variable_array,label_array)
 
@@ -36,12 +32,11 @@ initial_index = encoding_Instructions(sim.cores[1],sim.memory,initial_index,vari
 # sim.cores[2].program = final_text_inst
 # initial_index = encoding_Instructions(sim.cores[2],sim.memory,initial_index,variable_array)
 
-show(sim)
-
-#println(sim.cores[1].pc)
 #println(sim.cores[2].pc)
+# alloc_dataSeg_in_memory(sim.memory, data_inst_final, sim.cores[1], variable_array)
+# println("----------------------------")
 
-
-alloc_dataSeg_in_memory(sim.memory, data_inst_final, sim.cores[1], variable_array)
-println("----------------------------")
 show(sim)
+run(sim)
+println(sim.cores[1].registers)
+
