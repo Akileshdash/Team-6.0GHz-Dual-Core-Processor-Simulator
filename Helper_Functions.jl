@@ -78,6 +78,22 @@ function show_hex(value)
     return lpad(hex_str, 2, '0')
 end
 
+# function show(proc::Processor)
+#     println("Processor Memory (in hex):")
+#     # rows_to_show = min(15, size(proc.memory, 1))  # Choose the minimum of 10 and the actual number of rows
+#     rows_to_show = min(550, 550)
+#     for row in reverse(510:rows_to_show)
+#         combined_value = UInt32(0)
+#         print("$row -> ")
+#         for col in 1:size(proc.memory, 2)
+#             print("0x$(show_hex(proc.memory[row, col]))\t")
+#             if col % 4 == 0
+#                 println()
+#             end
+#         end
+#     end
+# end
+
 function show(proc::Processor)
     println("Processor Memory (in hex):")
     rows_to_show = min(50, size(proc.memory, 1))  # Choose the minimum of 10 and the actual number of rows
@@ -92,6 +108,8 @@ function show(proc::Processor)
         end
     end
 end
+
+
 
 # function show_hex(value)
 #     hex_str = string(value, base=16)
