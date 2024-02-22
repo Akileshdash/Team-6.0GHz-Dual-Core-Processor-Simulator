@@ -83,7 +83,7 @@ function text_inst_parser(text_instructions::Vector{String})
         mutable_str = String(text_instructions[i])
         modified_str = replace_commas_with_spaces(mutable_str)
         final_str = replace_colon_with_space(modified_str)
-        push!(list, final_str)
+        push!(list, strip(final_str))
         #println(modified_str, "  ", final_str)
     end
 
@@ -105,7 +105,7 @@ function data_inst_parser(data_instructions::Vector{String})
         #println(mutable_str, "\t", final_str)
     end
     
-    println(data_instructions_2)
+    #println(data_instructions_2)
 
     label_array = []
     

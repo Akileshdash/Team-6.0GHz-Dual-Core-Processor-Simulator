@@ -1,7 +1,14 @@
-function int_to_32bit_bin(n::Int)
-    binary_str_20bit = string(n + 2^20, base=2)[2:end]
-    binary_str_32bit = string("0" ^ (32 - length(binary_str_20bit)), binary_str_20bit)
-    return binary_str_32bit
+
+function find_index_for_label(label_array, label)
+    for row in label_array
+        if row[1] == label
+            return row[2]
+        end
+    end
+    return nothing  # Return nothing if the string is not found
 end
 
-println(int_to_32bit_bin(64))
+label_array = [("print",8),("print1",8),("print2",8)]
+label = "print1"
+
+println(find_index_for_label(label_array,label))

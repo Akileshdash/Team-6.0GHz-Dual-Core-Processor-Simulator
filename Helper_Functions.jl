@@ -1,3 +1,27 @@
+operator_array = ["add","sub","sll","xor","srl","sra","or","and","addi","xori","ori","andi","slli","srli","srai","li","andi","mv","lb","lh","lw","lbu","lhu","sb","sh","sw","beq","bne","blt","bgt","bge","bltu","bgeu","lui","jal","jalr","j",]
+
+function find_index_for_label(label_array, label)
+    for row in label_array
+        if row[1] == label
+            return row[2]
+        end
+    end
+    return nothing  # Return nothing if the string is not found
+end
+
+
+function find_and_remove(search_string, string_array)
+    index = indexin([search_string], string_array)
+
+    if isempty(index)
+        return nothing
+    else
+        index = first(index)  # Get the first index (assuming no duplicates)
+        removed_element = popat!(string_array, index)
+        return index
+    end
+end
+
 mutable struct Core1
     id::Int
     registers::Array{Int, 1}
@@ -13,13 +37,22 @@ end
 
 function int_to_5bit_bin(n::Int)
     binary_str = string(n, base=2, pad=5)
-    
+    return binary_str
+end
+
+function int_to_12bit_bin(n::Int)
+    binary_str = string(n, base=2, pad=12)
     return binary_str
 end
 
 function int_to_signed_12bit_bin(n::Int)
-    binary_str = string(n + 2^12, base=2)[2:end]
-    return binary_str
+    binary_str = string(n + 2^12, base=2)
+    return binary_str[end-11:end]
+end
+
+function int_to_signed_13bit_bin(n::Int)
+    binary_str_13bit = string(n + 2^13, base=2)[end-12:end]
+    return binary_str_13bit
 end
 
 function int_to_20bit_bin(n::Int)
@@ -33,6 +66,11 @@ function int_to_32bit_bin(n::Int)
     return binary_str_32bit
 end
 
+function int_to_signed_32bit_bin(n::Int)
+    binary_str_32bit = string(n + 2^32, base=2)[end-31:end]
+    return binary_str_32bit
+end
+
 function show_hex(value)
     hex_str = string(value, base=16)
     return lpad(hex_str, 2, '0')
@@ -40,7 +78,7 @@ end
 
 function show(proc::Processor)
     println("Processor Memory (in hex):")
-    rows_to_show = min(15, size(proc.memory, 1))  # Choose the minimum of 10 and the actual number of rows
+    rows_to_show = min(50, size(proc.memory, 1))  # Choose the minimum of 10 and the actual number of rows
     for row in reverse(1:rows_to_show)
         combined_value = UInt32(0)
         print("$row -> ")
