@@ -227,7 +227,7 @@ function encoding_Instructions(core::Core1, memory,initial_index,variable_array,
                #LW rd String
         elseif opcode == "LW"
             #Lets give this opcode name as LS i.e Load string
-            if parst[2][1]=='a'
+            if parts[2][1]=='a'
                 rd = parse(Int, parts[2][2:end])+11
             else    
                 rd = parse(Int, parts[2][2:end])+1

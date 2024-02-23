@@ -10,7 +10,7 @@ instruction_formats = [
     "1100011" => "B",  # Break Format
     "0110111" => "U",  # Upper Immediate Format
     "1101111" => "JAL",  # Jump Format
-    "1100111" => "JALR"  # Jump and Link Register Format
+    "1100111" => "JALR",  # Jump and Link Register Format
     "1111111" => "ECALL",  # ecall format
 ]
 
@@ -148,6 +148,24 @@ function int_to_signed_32bit_bin(n::Int)
     binary_str_32bit = string(n + 2^32, base=2)
     return binary_str_32bit[end-31:end]
 end
+
+
+function string_to_binary_8bit_string_array(str::String)
+    hex_array = transcode(UInt8, str)
+    binary_array = [bitstring(UInt8(x)) for x in hex_array]
+    return binary_array
+end
+
+function binary_to_letters(binary_strings::Vector{String})
+    letters = Char[]
+    for binary_str in binary_strings
+        decimal_value = parse(Int, binary_str, base=2)
+        letter = Char(decimal_value)
+        push!(letters, letter)
+    end
+    return join(letters)
+end
+
 
 function show_hex(value)
     hex_str = string(value, base=16)

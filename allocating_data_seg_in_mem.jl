@@ -1,5 +1,4 @@
 include("sim.jl")
-include("string_to_binaryString.jl")
 include("Helper_Functions.jl")
 
 function binary_to_uint8(binary::String)

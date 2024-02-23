@@ -105,9 +105,9 @@ function data_inst_parser(data_instructions::Vector{String})
         #println(mutable_str, "\t", final_str)
     end
     
-    #println(data_instructions_2)
+    # println(data_instructions_2)
 
-    label_array = []
+    varibale_array = []
     
     for i in eachindex(data_instructions_2)
         if occursin(".word", data_instructions_2[i])
@@ -117,7 +117,7 @@ function data_inst_parser(data_instructions::Vector{String})
                     continue
                 end
                 if j == 1
-                    push!(label_array, strip(split_list[j]))
+                    push!(varibale_array, strip(split_list[j]))
                     push!(list, strip(split_list[j]))
                     push!(list, ".word")
                     continue
@@ -140,20 +140,18 @@ function data_inst_parser(data_instructions::Vector{String})
                     continue
                 end
                 if j == 1
-                    push!(label_array, strip(split_list[j]))
+                    push!(varibale_array, strip(split_list[j]))
                     push!(list, strip(split_list[j]))
                     push!(list, ".string")
                     continue
                 end
                 temp_str = String(split_list[j])
                 final_str = replace_d_quotes_with_space(temp_str)
-                push!(list, lstrip(replace_wrong_nline_with_right_nline(final_str)))
+                push!(list, replace_wrong_nline_with_right_nline(final_str[2:end]))
                 
             end
         end
     end
 
-    return list, label_array
+    return list, varibale_array
 end
-
-
