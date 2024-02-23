@@ -60,6 +60,22 @@ B_format_instructions = [
     "111" => "BGEU",
 ]
 
+function replace_commas_with_spaces(input_string::String)
+    return replace(input_string, "," => " ")
+end
+
+function replace_colon_with_space(input_string::String)
+    return replace(input_string, ":" => "")
+end
+
+function replace_d_quotes_with_space(input_string::String)
+    return replace(input_string, "\"" => "")
+end
+
+function replace_wrong_nline_with_right_nline(input_string::String)
+    return replace(input_string, "\\n" => "\n")
+end
+
 
 function mem_pc_to_row(mem_pc::Int)
     row = mem_pc/4
@@ -149,6 +165,26 @@ function int_to_signed_32bit_bin(n::Int)
     return binary_str_32bit[end-31:end]
 end
 
+function bin_string_to_signed_int(bin_str::AbstractString)
+    decimal_value = parse(Int, bin_str, base=2)
+    num_bits = count(x -> x == '0' || x == '1', bin_str)
+    if bin_str[1] == '1'
+        decimal_value -= 2 ^ num_bits
+    end
+    return decimal_value
+end
+
+function binary_to_uint8(binary::String)
+    result = 0
+    for (i, bit) in enumerate(reverse(binary))
+        if bit == '1'
+            result += 2^(i-1)
+        end
+    end
+    return result
+end
+
+
 
 function string_to_binary_8bit_string_array(str::String)
     hex_array = transcode(UInt8, str)
@@ -190,15 +226,6 @@ function show(proc::Processor, start_row::Int, end_row::Int)
             end
         end
     end
-end
-
-function bin_string_to_signed_int(bin_str::AbstractString)
-    decimal_value = parse(Int, bin_str, base=2)
-    num_bits = count(x -> x == '0' || x == '1', bin_str)
-    if bin_str[1] == '1'
-        decimal_value -= 2 ^ num_bits
-    end
-    return decimal_value
 end
 
 #This function extracts the entire word, i.e. 32 bits from the initial index

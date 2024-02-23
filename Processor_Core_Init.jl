@@ -1,4 +1,3 @@
-
 mutable struct Core1
     id::Int
     registers::Array{Int, 1}
@@ -24,4 +23,16 @@ function processor_Init()
     clock = 0
     cores = [core_Init(1), core_Init(2)] 
     return Processor(memory, clock, cores)
+end
+
+function run(processor::Processor)
+    while processor.cores[1].pc<=length(processor.cores[1].program)
+        processor.clock+=1
+        Decode_and_execute(processor.cores[1],processor.memory)
+    end
+    # while processor.cores[2].pc<=(length(processor.cores[2].program)+length(processor.cores[1].program))
+    #     println(processor.clock)
+    #     processor.clock+=1
+    #     Decode_and_execute(processor.cores[2],processor.memory)
+    # end
 end

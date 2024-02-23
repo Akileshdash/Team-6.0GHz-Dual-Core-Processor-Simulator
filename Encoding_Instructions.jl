@@ -1,5 +1,51 @@
 include("Helper_Functions.jl")
 
+function encoding_all_instructions_to_memory(sim)
+    initial_index=1     
+
+    #For core 1
+    text_instructions,data_instructions = parse_assembly(file_path_1)
+    final_text_inst = text_inst_parser(text_instructions)
+    data_inst_final, variable_array = data_inst_parser(data_instructions)
+
+    label_array = Vector{Tuple{String, Int}}()
+    for str in final_text_inst
+        if !(in(split(str,' ')[1], operator_array))
+            label = split(str,' ')[1]
+            index = find_and_remove(label, final_text_inst)
+            push!(label_array, (label, index))
+        end
+    end
+
+    sim.cores[1].program = final_text_inst
+    variable_address_array = alloc_dataSeg_in_memory(sim.memory, data_inst_final, sim.cores[1], variable_array)
+    variable_address_array .-=1
+    initial_index = encoding_Instructions(sim.cores[1],sim.memory,initial_index,variable_array,label_array,variable_address_array)
+
+    #===========================================================================#
+    
+    #For core 2
+    text_instructions,data_instructions = parse_assembly(file_path_2)
+    final_text_inst = text_inst_parser(text_instructions)
+    data_inst_final, variable_array = data_inst_parser(data_instructions)
+
+    label_array = Vector{Tuple{String, Int}}()
+    for str in final_text_inst
+        if !(in(split(str,' ')[1], operator_array))
+            label = split(str,' ')[1]
+            index = find_and_remove(label, final_text_inst)
+            push!(label_array, (label, index))
+        end
+    end
+
+    sim.cores[2].program = final_text_inst
+    variable_address_array = alloc_dataSeg_in_memory(sim.memory, data_inst_final, sim.cores[2], variable_array)
+    variable_address_array .-=1
+    initial_index = encoding_Instructions(sim.cores[2],sim.memory,initial_index,variable_array,label_array,variable_address_array)
+end
+
+
+
 function encoding_Instructions(core::Core1, memory,initial_index,variable_array,label_array,variable_address_array)
     memory_index = core.pc = initial_index
     while (core.pc-initial_index+1)<=length(core.program)                      

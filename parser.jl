@@ -1,18 +1,4 @@
-function replace_commas_with_spaces(input_string::String)
-    return replace(input_string, "," => " ")
-end
-
-function replace_colon_with_space(input_string::String)
-    return replace(input_string, ":" => "")
-end
-
-function replace_d_quotes_with_space(input_string::String)
-    return replace(input_string, "\"" => "")
-end
-
-function replace_wrong_nline_with_right_nline(input_string::String)
-    return replace(input_string, "\\n" => "\n")
-end
+include("Helper_Functions.jl")
 
 function parse_assembly(file_path::String)
     text_instructions = String[]
@@ -154,4 +140,54 @@ function data_inst_parser(data_instructions::Vector{String})
     end
 
     return list, varibale_array
+end
+
+#========================================================
+            Data varibles Allocation
+========================================================#
+
+function alloc_dataSeg_in_memory(memory::Array{UInt8,2}, data_inst_final::Vector{Any}, core::Core1, variable_array::Vector{Any})
+    
+    variable_address_array = []
+    mem_pc = 2049 + 1024*(core.id-1)
+    string_flag = false
+    word_flag = false
+
+    for i in eachindex(data_inst_final)
+        str = data_inst_final[i]
+        if str == ".word" 
+            word_flag = true
+            string_flag = false
+            continue
+        end
+
+        if str == ".string" 
+            word_flag = false
+            string_flag = true
+            continue
+        end
+
+        if str in variable_array
+            push!(variable_address_array, mem_pc)
+            continue
+        end
+ 
+        if string_flag
+            binary_of_str_array = string_to_binary_8bit_string_array(String(str))
+            for k in eachindex(binary_of_str_array)
+                memory[mem_pc_to_row(mem_pc),mem_pc_to_col(mem_pc)] = binary_to_uint8(binary_of_str_array[k])
+                mem_pc += 1
+            end
+            memory[mem_pc_to_row(mem_pc),mem_pc_to_col(mem_pc)] = C_NULL
+            mem_pc += 1
+        end
+
+        if word_flag
+            num = parse(Int , str)
+            bin_str = int_to_32bit_bin(num)
+            in_memory_place_word(memory, mem_pc_to_row(mem_pc), mem_pc_to_col(mem_pc), bin_str)
+            mem_pc += 4
+        end
+    end
+    return variable_address_array
 end
