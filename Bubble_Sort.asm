@@ -27,35 +27,33 @@ lw x4,size
 addi x6,x4,1
 #############################
 #Print Code
-jal x2, print
 jal x1, bubblesort
 
-print:
-    mv x4,x23
-    mv x5,x20
-    jal x3,print1
-    jalr x2
+#print:
+#    mv x4,x23
+#    mv x5,x20
+#    jal x3,print1
+#    jalr x2
    
-print1:
-    addi x4,x4,-1
-    li a7,1
-    lw a0,0(x5)
-    addi x5,x5,4
-    ecall
-    li a7,4
-    la a0,str4
-    ecall
-    bne x4,x0,print1
-    li a7,4
-    la a0,str3
-    ecall
-    jalr x3
+#print1:
+#    addi x4,x4,-1
+#    li a7,1
+#    lw a0,0(x5)
+#    addi x5,x5,4
+#    ecall
+#    li a7,4
+#    la a0,str4
+#    ecall
+#    bne x4,x0,print1
+#    li a7,4
+#    la a0,str3
+#    ecall
+#    jalr x3
   
 swap:
     #temp variable is x14
     sw x10,4(x13)
     sw x11,0(x13)
-    jal x2,print
     j j_increment
     
 j_increment:  
@@ -80,6 +78,4 @@ bubblesort:
     j check
  
 exit:
-    li x1,1
-    li a7,10
-    ecall
+    li x31,100

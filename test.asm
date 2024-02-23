@@ -8,8 +8,8 @@ size:   .word 20                # Size of the array
 
 #Initializing Code
 #x20 is the pointer to the start of array
-#lw x23,size     #contains the size of array
-#la x20,array
+lw x23,size     #contains the size of array
+la x20,array
 
 #Storing final end of array in x21
 addi x21,x23,-2
@@ -23,7 +23,7 @@ mv x5,x20
 # i ranges from 0 to 19,i = 0, considering x0
 li x12,0
 # increasing i till size, ie till x4
-#lw x4,size
+lw x4,size
 addi x6,x4,1
 #############################
 #Print Code

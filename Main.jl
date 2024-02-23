@@ -34,15 +34,15 @@ sim.cores[1].program = final_text_inst
 
 #println(sim.cores[2].pc)
 variable_address_array = alloc_dataSeg_in_memory(sim.memory, data_inst_final, sim.cores[1], variable_array)
-
-println(variable_array)
-println(variable_address_array)
+variable_address_array .-=1
+# println(variable_array)
+# println(variable_address_array)
 
 initial_index = encoding_Instructions(sim.cores[1],sim.memory,initial_index,variable_array,label_array,variable_address_array)
 
 # println("----------------------------")
 
-show(sim,512,532)
 run(sim)
 println(sim.cores[1].registers)
+show(sim,512,532)
 

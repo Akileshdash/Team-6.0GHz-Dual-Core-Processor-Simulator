@@ -41,6 +41,7 @@ L_format_instructions = [
     "011" => "LA",
     "100" => "LBU",
     "101" => "LHU",
+    "110" => "LS",
 ]
 
 S_format_instructions = [

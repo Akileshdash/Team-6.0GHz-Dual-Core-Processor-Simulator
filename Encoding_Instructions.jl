@@ -219,15 +219,26 @@ function encoding_Instructions(core::Core1, memory,initial_index,variable_array,
             in_memory_place_word(memory,memory_index,1,L_format_instruction)
             
         #17    #LW rd offset(rs)
+               #LW rd String
         elseif opcode == "LW"
+            #Lets give this opcode name as LS i.e Load string
             rd = parse(Int, parts[2][2:end])+1
-            offset = match(r"\d+", parts[3])
-            offset = parse(Int, offset.match)
-            rs = match(r"\(([^)]+)\)", parts[3])
-            rs = rs.captures[1][2:end]
-            rs = parse(Int, rs)+1
-            #println("encoding lw : rd = ",rd-1," rs = ",rs-1," offset = ",offset)
-            L_format_instruction = int_to_signed_12bit_bin(offset)*int_to_5bit_bin(rs-1)*"010"*int_to_5bit_bin(rd-1)*L_format_instruction
+            if parts[3] in variable_array
+                rs = 1
+                variable_name = parts[3]
+                index = findfirst(x -> x == variable_name, variable_array)
+                address = variable_address_array[index]
+                #L_format_instruction = int_to_signed_12bit_bin(offset)*int_to_5bit_bin(rs-1)*"010"*int_to_5bit_bin(rd-1)*L_format_instruction
+                L_format_instruction = int_to_signed_12bit_bin(address)*int_to_5bit_bin(rs-1)*"110"*int_to_5bit_bin(rd-1)*L_format_instruction
+            else
+                offset = match(r"\d+", parts[3])
+                offset = parse(Int, offset.match)
+                rs = match(r"\(([^)]+)\)", parts[3])
+                rs = rs.captures[1][2:end]
+                rs = parse(Int, rs)+1
+                #println("encoding lw : rd = ",rd-1," rs = ",rs-1," offset = ",offset)
+                L_format_instruction = int_to_signed_12bit_bin(offset)*int_to_5bit_bin(rs-1)*"010"*int_to_5bit_bin(rd-1)*L_format_instruction
+            end
             in_memory_place_word(memory,memory_index,1,L_format_instruction)
 
         #18    #LBU rd, offset(rs)

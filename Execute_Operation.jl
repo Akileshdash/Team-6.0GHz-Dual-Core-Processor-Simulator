@@ -62,7 +62,11 @@ function Execute_Operation_L(operator,rd,rs,offset,core::Core1,memory,Instructio
         address = parse(UInt,Instruction_to_decode[1:12], base=2)
         core.registers[rd] = address
     elseif operator=="LW"
-        address = core.registers[rs]
+        address = core.registers[rs]+offset
+        row,col = address_to_row_col(address)
+        core.registers[rd] = return_word_from_memory_littleEndian(memory,address)
+    elseif operator=="LS"
+        address = parse(UInt,Instruction_to_decode[1:12], base=2)
         core.registers[rd] = return_word_from_memory_littleEndian(memory,address)
     elseif operator=="LB"
         address = core.registers[rs] + offset

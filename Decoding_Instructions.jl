@@ -53,7 +53,6 @@ function Decode_and_execute(core::Core1,memory)
                 break
             end
         end
-        #println("decoding LW : rd = ",rd-1," rs=  ",rs-1," offset = ",offset," operator = ",operator)
         Execute_Operation_L(operator,rd,rs,offset,core,memory,Instruction_to_decode)
 
         
