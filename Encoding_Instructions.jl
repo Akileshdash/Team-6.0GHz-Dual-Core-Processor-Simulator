@@ -16,6 +16,7 @@ function encoding_Instructions(core::Core1, memory,initial_index,variable_array,
         U_format_instruction = "0110111"        #Upper Immediate Format
         JAL_format_instruction = "1101111"        #Jump Format
         JALR_format_instruction = "1100111"        #Jump Format
+        ecall_format_instruction = "1111111"        #ecall Format
 
         #====================================================================================================================
                                                     R Format Instructions          
@@ -186,7 +187,11 @@ function encoding_Instructions(core::Core1, memory,initial_index,variable_array,
         #16    #LA rd, String
         elseif opcode == "LA"
             rs = 1      #Just for encoding ,actually not needed
-            rd = parse(Int, parts[2][2:end])+1
+            if parts[2][1]=='a'
+                rd = parse(Int, parts[2][2:end])+11
+            else
+                rd = parse(Int, parts[2][2:end])+1
+            end
             variable_name = parts[3]
             index = findfirst(x -> x == variable_name, variable_array)
             address = variable_address_array[index]
@@ -222,7 +227,11 @@ function encoding_Instructions(core::Core1, memory,initial_index,variable_array,
                #LW rd String
         elseif opcode == "LW"
             #Lets give this opcode name as LS i.e Load string
-            rd = parse(Int, parts[2][2:end])+1
+            if parst[2][1]=='a'
+                rd = parse(Int, parts[2][2:end])+11
+            else    
+                rd = parse(Int, parts[2][2:end])+1
+            end
             if parts[3] in variable_array
                 rs = 1
                 variable_name = parts[3]
@@ -459,8 +468,10 @@ function encoding_Instructions(core::Core1, memory,initial_index,variable_array,
                 JALR_format_instruction=imm*int_to_5bit_bin(rs)*"000"*int_to_5bit_bin(rd)*JALR_format_instruction
             end
             in_memory_place_word(memory,memory_index,1,JALR_format_instruction)
-
-        
+        #ecall
+        elseif opcode == "ECALL"
+            ecall_format_instruction = ("0"^25) * ecall_format_instruction
+            in_memory_place_word(memory,memory_index,1,ecall_format_instruction)
         else
                 memory_index -= 1   
         end

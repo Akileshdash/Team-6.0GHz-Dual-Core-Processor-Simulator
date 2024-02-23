@@ -11,6 +11,7 @@ instruction_formats = [
     "0110111" => "U",  # Upper Immediate Format
     "1101111" => "JAL",  # Jump Format
     "1100111" => "JALR"  # Jump and Link Register Format
+    "1111111" => "ECALL",  # ecall format
 ]
 
 R_format_instructions = [

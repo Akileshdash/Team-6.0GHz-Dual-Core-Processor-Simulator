@@ -100,6 +100,8 @@ function Decode_and_execute(core::Core1,memory)
         rs = parse(Int,Instruction_to_decode[13:17], base=2)+1
         core.registers[rd] = core.pc + 1 
         core.pc = core.registers[rs] + offset - 1
+    elseif instruction_type=="ECALL"
+        #decoding of ecall
     end
     core.pc+=1
 end

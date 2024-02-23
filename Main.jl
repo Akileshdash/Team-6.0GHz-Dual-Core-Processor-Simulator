@@ -41,8 +41,8 @@ variable_address_array .-=1
 initial_index = encoding_Instructions(sim.cores[1],sim.memory,initial_index,variable_array,label_array,variable_address_array)
 
 # println("----------------------------")
-
+show(sim,512,532)
 run(sim)
-println(sim.cores[1].registers)
+println("core 1 registers : ",sim.cores[1].registers)
 show(sim,512,532)
 
