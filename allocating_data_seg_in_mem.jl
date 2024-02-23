@@ -1,5 +1,6 @@
 include("sim.jl")
 include("string_to_binaryString.jl")
+include("Helper_Functions.jl")
 
 function binary_to_uint8(binary::String)
     result = 0
@@ -9,22 +10,6 @@ function binary_to_uint8(binary::String)
         end
     end
     return result
-end
-
-function mem_pc_to_row(mem_pc::Int)
-    row = mem_pc/4
-
-    return Int(ceil(row))
-end
-
-function mem_pc_to_col(mem_pc::Int)
-    if mem_pc%4 != 0
-        col = mem_pc%4
-    else
-        col = 4
-    end 
-
-    return col
 end
 
 function get_loc_vars(core_id::Int)
@@ -71,7 +56,7 @@ function alloc_dataSeg_in_memory(memory::Array{UInt8,2}, data_inst_final::Vector
         # memory[mem_pc_to_row(mem_pc)][mem_pc_to_col(mem_pc)] = 
         if string_flag
             binary_of_str_array = string_to_binary_8bit_string_array(String(str))
-            println(str, " ", binary_of_str_array)
+            #println(str, " ", binary_of_str_array)
 
             for k in eachindex(binary_of_str_array)
                 #println(k, " ", binary_to_uint8(binary_of_str_array[k]), " ", str)

@@ -1,6 +1,6 @@
 include("Helper_Functions.jl")
 
-function encoding_Instructions(core::Core1, memory,initial_index,variable_array,label_array)
+function encoding_Instructions(core::Core1, memory,initial_index,variable_array,label_array,variable_address_array)
     memory_index = core.pc = initial_index
     while (core.pc-initial_index+1)<=length(core.program)                      
         parts = split(core.program[core.pc-initial_index+1],' ') 
@@ -183,7 +183,17 @@ function encoding_Instructions(core::Core1, memory,initial_index,variable_array,
                                                 L Format Instructions          ( Load Format )
         ====================================================================================================================#
 
-
+        #16    #LA rd, String
+        elseif opcode == "LA"
+            rs = 1      #Just for encoding ,actually not needed
+            rd = parse(Int, parts[2][2:end])+1
+            variable_name = parts[3]
+            index = findfirst(x -> x == variable_name, variable_array)
+            address = variable_address_array[index]
+            #println(variable_address_array[index])
+            L_format_instruction = int_to_signed_12bit_bin(address)*int_to_5bit_bin(rs-1)*"011"*int_to_5bit_bin(rd-1)*L_format_instruction
+            in_memory_place_word(memory,memory_index,1,L_format_instruction)
+    
         #16    #LB rd, offset(rs)
         elseif opcode == "LB"
             rd = parse(Int, parts[2][2:end])+1
@@ -207,7 +217,7 @@ function encoding_Instructions(core::Core1, memory,initial_index,variable_array,
             core.registers[rd]=memory[1,core.registers[rs]+offset+1]
             #Function has to be written after Memory 2d Array is formed
             in_memory_place_word(memory,memory_index,1,L_format_instruction)
-
+            
         #17    #LW rd offset(rs)
         elseif opcode == "LW"
             rd = parse(Int, parts[2][2:end])+1
@@ -216,6 +226,7 @@ function encoding_Instructions(core::Core1, memory,initial_index,variable_array,
             rs = match(r"\(([^)]+)\)", parts[3])
             rs = rs.captures[1][2:end]
             rs = parse(Int, rs)+1
+            #println("encoding lw : rd = ",rd-1," rs = ",rs-1," offset = ",offset)
             L_format_instruction = int_to_signed_12bit_bin(offset)*int_to_5bit_bin(rs-1)*"010"*int_to_5bit_bin(rd-1)*L_format_instruction
             in_memory_place_word(memory,memory_index,1,L_format_instruction)
 
@@ -288,13 +299,6 @@ function encoding_Instructions(core::Core1, memory,initial_index,variable_array,
             rd = parse(Int, rd)+1
             imm = int_to_signed_12bit_bin(offset)
             S_format_instruction = imm[1:7]*int_to_5bit_bin(rs-1)*int_to_5bit_bin(rd-1)*"010"*imm[8:12]*S_format_instruction
-            row = div(core.registers[rd] + offset + 1, 4) + 1
-            col = (core.registers[rd]+offset+1)%4
-            if col==0
-                col=4
-                row-=1
-            end
-            bin = string(core.registers[rs], base=2, pad=32) 
             in_memory_place_word(memory,memory_index,1,S_format_instruction)
 
 
@@ -335,14 +339,11 @@ function encoding_Instructions(core::Core1, memory,initial_index,variable_array,
             label = parts[4]
             index = find_index_for_label(label_array,label)
             offset = 4*(index - core.pc)         #Offset is in bytes
-            #imm = int_to_signed_12bit_bin(offset)
             imm = int_to_signed_13bit_bin(offset)
             B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"100"*imm[9:12]*imm[2]*B_format_instruction
-            println("BLT ",parts[2]," ",parts[3]," ",offset," ",B_format_instruction)
+            #println("BLT ",parts[2]," ",parts[3]," ",offset," ",B_format_instruction)
             in_memory_place_word(memory,memory_index,1,B_format_instruction)
 
-            11111111010101101100100011100011
-            01111111010101101100100011100011
         #25    #BGT  rs1 rs2 label
         #BLT  rs1 rs2 offset
         elseif opcode == "BGT"
@@ -431,8 +432,8 @@ function encoding_Instructions(core::Core1, memory,initial_index,variable_array,
         #31     #JALR rs        # store in x1 core.pc+1
             #JALR rd, rs, offset
         elseif opcode == "JALR"
-            println(parts)
-            println(length(parts))
+            #println(parts)
+            #println(length(parts))
             if length(parts)==2
                 rs = parse(Int, parts[2][2:end])
                 rd = 1

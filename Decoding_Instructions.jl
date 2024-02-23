@@ -42,7 +42,35 @@ function Decode_and_execute(core::Core1,memory)
         Execute_Operation_I(operator,rd,rs1,imm_value,core,memory,Instruction_to_decode)
 
     elseif instruction_type=="L"
+        rs = parse(Int,Instruction_to_decode[13:17],base = 2)+1
+        rd = parse(Int,Instruction_to_decode[21:25],base = 2)+1
+        offset =bin_string_to_signed_int(Instruction_to_decode[1:12])
+        Instruction_differentiator = Instruction_to_decode[18:20]
+        operator = ""
+        for (temp1, temp2) in L_format_instructions
+            if temp1 == Instruction_differentiator
+                operator = temp2
+                break
+            end
+        end
+        #println("decoding LW : rd = ",rd-1," rs=  ",rs-1," offset = ",offset," operator = ",operator)
+        Execute_Operation_L(operator,rd,rs,offset,core,memory,Instruction_to_decode)
+
+        
     elseif instruction_type=="S"
+        #S_format_instruction = imm[1:7]*int_to_5bit_bin(rs-1)*int_to_5bit_bin(rd-1)*"010"*imm[8:12]*S_format_instruction
+        rs = parse(Int,Instruction_to_decode[8:12], base=2)+1
+        rd = parse(Int,Instruction_to_decode[13:17], base=2)+1
+        offset = bin_string_to_signed_int(Instruction_to_decode[1:7]*Instruction_to_decode[21:25])
+        Instruction_differentiator = Instruction_to_decode[18:20]
+        for (temp1, temp2) in S_format_instructions
+            if temp1 == Instruction_differentiator
+                operator = temp2
+                break
+            end
+        end
+        Execute_Operation_S(operator,rd,rs,offset,core,memory,Instruction_to_decode)
+
     elseif instruction_type=="B"
         # Chosen Instruction is B
         rs1 = parse(Int,Instruction_to_decode[13:17], base=2)+1

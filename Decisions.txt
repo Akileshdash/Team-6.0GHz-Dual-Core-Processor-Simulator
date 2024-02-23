@@ -9,3 +9,5 @@
 
     . Data Segment
         . For Core 1 starting from row 513
+    . Some problem in la and lw
+        . some connection between auipc and addi

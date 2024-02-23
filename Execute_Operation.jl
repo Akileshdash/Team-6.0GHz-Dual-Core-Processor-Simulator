@@ -36,9 +36,7 @@ end
 
 function  Execute_Operation_I(operator,rd,rs1,imm_value,core::Core1,memory,Instruction_to_decode)
     if operator=="ADDI"
-        println("Initial value : ",core.registers[rd])
         core.registers[rd] = core.registers[rs1] + imm_value
-        println("core.pc : ",core.pc," loading from : ",rs1-1," Initial Value : ",core.registers[rs1]," imm value : ",imm_value," value stored : ",core.registers[rd])
     elseif operator=="XORI"
         core.registers[rd] = core.registers[rs1] $ imm_value
     elseif operator=="ORI"
@@ -56,6 +54,33 @@ function  Execute_Operation_I(operator,rd,rs1,imm_value,core::Core1,memory,Instr
             #SRAI operation
             core.registers[rd] = core.registers[rs1] >> imm_value
         end
+    end
+end
+
+function Execute_Operation_L(operator,rd,rs,offset,core::Core1,memory,Instruction_to_decode)
+    if operator=="LA"
+        address = parse(UInt,Instruction_to_decode[1:12], base=2)
+        core.registers[rd] = address
+    elseif operator=="LW"
+        address = core.registers[rs]
+        core.registers[rd] = return_word_from_memory_littleEndian(memory,address)
+    elseif operator=="LB"
+        address = core.registers[rs] + offset
+        row,col = address_to_row_col(address)
+        core.registers[rd] = memory[row,col]
+    end
+end
+
+function Execute_Operation_S(operator,rd,rs,offset,core,memory,Instruction_to_decode)
+    if operator=="SW"
+        address = core.registers[rd] + offset
+        row,col = address_to_row_col(address)
+        bin = int_to_32bit_bin(core.registers[rs])
+        in_memory_place_word(memory,row,col,bin)
+    elseif operator=="SB"
+        address = core.registers[rd] + offset
+        row,col = address_to_row_col(address)
+        memory[row,col] = core.registers[rs]
     end
 end
 

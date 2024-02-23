@@ -12,7 +12,6 @@ mutable struct Processor
     cores::Array{Core1,1}
 end
 
-
 function core_Init(id)
     registers = fill(0, 32)
     pc = 1

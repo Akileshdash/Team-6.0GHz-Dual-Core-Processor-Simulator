@@ -1,6 +1,6 @@
 include("Processor_Core_Init.jl")
 
-operator_array = ["add","sub","sll","xor","srl","sra","or","and","addi","xori","ori","andi","slli","srli","srai","li","andi","mv","lb","lh","lw","lbu","lhu","sb","sh","sw","beq","bne","blt","bgt","bge","bltu","bgeu","lui","jal","jalr","j",]
+operator_array = ["add","sub","sll","xor","srl","sra","or","and","addi","xori","ori","andi","slli","srli","srai","li","la","andi","mv","lb","lh","lw","lbu","lhu","sb","sh","sw","beq","bne","blt","bgt","bge","bltu","bgeu","lui","jal","jalr","j",]
 
 instruction_formats = [
     "0110011" => "R",
@@ -34,6 +34,20 @@ I_format_instructions = [
     "110" => "OR",
     "111" => "ANDI",
 ]
+L_format_instructions = [
+    "000" => "LB",
+    "001" => "LH",
+    "010" => "LW",
+    "011" => "LA",
+    "100" => "LBU",
+    "101" => "LHU",
+]
+
+S_format_instructions = [
+    "000" => "SB",
+    "001" => "SH",
+    "010" => "SW",
+]
 
 B_format_instructions = [
     "000" => "BEQ",
@@ -44,6 +58,23 @@ B_format_instructions = [
     "111" => "BGEU",
 ]
 
+
+function mem_pc_to_row(mem_pc::Int)
+    row = mem_pc/4
+
+    return Int(ceil(row))
+end
+
+function mem_pc_to_col(mem_pc::Int)
+    if mem_pc%4 != 0
+        col = mem_pc%4
+    else
+        col = 4
+    end 
+    return col
+end
+
+
 function find_index_for_label(label_array, label)
     for row in label_array
         if row[1] == label
@@ -52,7 +83,6 @@ function find_index_for_label(label_array, label)
     end
     return nothing  # Return nothing if the string is not found
 end
-
 
 function find_and_remove(search_string, string_array)
     index = indexin([search_string], string_array)
@@ -122,20 +152,6 @@ function show_hex(value)
     return lpad(hex_str, 2, '0')
 end
 
-function show(proc::Processor)
-    println("Processor Memory (in hex):")
-    rows_to_show = min(11, size(proc.memory, 1))  # Choose the minimum of 10 and the actual number of rows
-    for row in reverse(1:rows_to_show)
-        combined_value = UInt32(0)
-        print("$row -> ")
-        for col in 1:size(proc.memory, 2)
-            print("0x$(show_hex(proc.memory[row, col]))\t")
-            if col % 4 == 0
-                println()
-            end
-        end
-    end
-end
 
 function show(proc::Processor, start_row::Int, end_row::Int)
     println("Processor Memory (in hex):")
@@ -257,4 +273,47 @@ function return_word_from_memory(memory,row,col)       #returns 32 bits from the
         value =  (temp) | (value) 
     end
     return value
+end
+
+function address_to_row_col(address)
+    row = div(address,4) + 1
+    col = (address%4) + 1
+    return row,col
+end
+
+function return_word_from_memory_littleEndian(memory,address)
+    row = div(address,4) + 1
+    col = (address%4) + 1
+    temp = UInt32(memory[row,col])
+    col+=1
+    if col<=4
+        temp = temp | ((UInt32(memory[row,col]))<<8)
+        col+=1
+        if col<=4
+            temp = temp | ((UInt32(memory[row,col]))<<16)
+            col+=1
+            if col<=4
+                temp = temp | ((UInt32(memory[row,col]))<<24)
+            else
+                col=1
+                row+=1
+                temp = temp | ((UInt32(memory[row,col]))<<24)
+            end
+        else
+            col = 1
+            row+=1
+            temp = temp | ((UInt32(memory[row,col]))<<16)
+            col+=1
+            temp = temp | ((UInt32(memory[row,col]))<<24)
+        end
+    else
+        row+=1
+        col=1
+        temp = temp | ((UInt32(memory[row,col]))<<8)
+        col+=1
+        temp = temp | ((UInt32(memory[row,col]))<<16)
+        col+=1
+        temp = temp | ((UInt32(memory[row,col]))<<24)
+    end
+    return temp
 end

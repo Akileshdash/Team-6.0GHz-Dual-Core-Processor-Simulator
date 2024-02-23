@@ -6,7 +6,7 @@ function string_to_binary_8bit_string_array(str::String)
 end
 
 arr = string_to_binary_8bit_string_array("\n")
-println(arr)
+#println(arr)
 
 function binary_to_letters(binary_strings::Vector{String})
     letters = Char[]
@@ -20,6 +20,6 @@ end
 
 binary_strings = ["01001000", "01100101", "01101100", "01101100", "01101111"]
 result = binary_to_letters(arr)
-println(result)
+#println(result)
 
 
