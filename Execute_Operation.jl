@@ -1,10 +1,8 @@
 include("Processor_Core_Init.jl")
 
-
-#====================================================================================================================
-                            R Format Operations          
-====================================================================================================================#
-
+#======================================================================
+                    Executing R Format Operations          
+======================================================================#
  
 function  Execute_Operation_R(operator,rd,rs1,rs2,core::Core1,memory,Instruction_to_decode)
    if operator=="ADD/SUB"
@@ -34,6 +32,10 @@ function  Execute_Operation_R(operator,rd,rs1,rs2,core::Core1,memory,Instruction
     end
 end
 
+#======================================================================
+                    Executing I Format Operations          
+======================================================================#
+ 
 function  Execute_Operation_I(operator,rd,rs1,imm_value,core::Core1,memory,Instruction_to_decode)
     if operator=="ADDI"
         core.registers[rd] = core.registers[rs1] + imm_value
@@ -57,6 +59,10 @@ function  Execute_Operation_I(operator,rd,rs1,imm_value,core::Core1,memory,Instr
     end
 end
 
+#======================================================================
+                    Executing L Format Operations          
+======================================================================#
+ 
 function Execute_Operation_L(operator,rd,rs,offset,core::Core1,memory,Instruction_to_decode)
     if operator=="LA"
         address = parse(UInt,Instruction_to_decode[1:12], base=2)
@@ -75,6 +81,10 @@ function Execute_Operation_L(operator,rd,rs,offset,core::Core1,memory,Instructio
     end
 end
 
+#======================================================================
+                    Executing S Format Operations          
+======================================================================#
+ 
 function Execute_Operation_S(operator,rd,rs,offset,core,memory,Instruction_to_decode)
     if operator=="SW"
         address = core.registers[rd] + offset
@@ -88,6 +98,10 @@ function Execute_Operation_S(operator,rd,rs,offset,core,memory,Instruction_to_de
     end
 end
 
+#======================================================================
+                    Executing B Format Operations          
+======================================================================#
+ 
 function Execute_Operation_B(operator,rs1,rs2,offset,core::Core1,memory,Instruction_to_decode)
     if operator=="BEQ"
         if core.registers[rs1] == core.registers[rs2]

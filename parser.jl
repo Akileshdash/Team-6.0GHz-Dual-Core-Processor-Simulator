@@ -57,8 +57,6 @@ function parse_assembly(file_path::String)
     return text_instructions, data_instructions
 end
 
-#-----------------------------------------------------------
-
 #========================================================
             Text Instruction Parsing
 ========================================================#

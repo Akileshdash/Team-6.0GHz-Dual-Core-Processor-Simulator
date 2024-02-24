@@ -1,5 +1,9 @@
 include("Helper_Functions.jl")
 
+#==========================================================================================================
+                                Encoding all instructions to memory
+===========================================================================================================#
+
 function encoding_all_instructions_to_memory(sim)
     initial_index=1     
 
@@ -44,7 +48,10 @@ function encoding_all_instructions_to_memory(sim)
     initial_index = encoding_Instructions(sim.cores[2],sim.memory,initial_index,variable_array,label_array_2,variable_address_array)
 end
 
-
+#==========================================================================================================
+                                Encoding each instrutcions to memory
+                                  ( Called by the above Function )
+===========================================================================================================#
 
 function encoding_Instructions(core::Core1, memory,initial_index,variable_array,label_array,variable_address_array)
     memory_index = core.pc = initial_index

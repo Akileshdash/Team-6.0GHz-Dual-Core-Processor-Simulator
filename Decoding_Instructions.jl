@@ -1,6 +1,11 @@
 include("Helper_Functions.jl")
 include("Execute_Operation.jl")
 
+
+#==========================================================================================================
+        Decoding and executing a single Instruction which pointed by the program counter at that time
+===========================================================================================================#
+
 function Decode_and_execute(core::Core1,memory)
     Instruction_to_decode = int_to_8bit_bin(memory[core.pc,4])*int_to_8bit_bin(memory[core.pc,3])*int_to_8bit_bin(memory[core.pc,2])*int_to_8bit_bin(memory[core.pc,1])
     opcode = Instruction_to_decode[end-6:end]

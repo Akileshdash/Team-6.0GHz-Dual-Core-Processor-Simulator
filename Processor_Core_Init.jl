@@ -1,3 +1,8 @@
+                            
+#==========================================================================================================
+                                        Processor Initializing
+===========================================================================================================#
+
 mutable struct Core1
     id::Int
     registers::Array{Int, 1}
@@ -25,7 +30,18 @@ function processor_Init()
     return Processor(memory, clock, cores)
 end
 
+                            
+#==========================================================================================================
+                                               Run Function
+===========================================================================================================#
+
+
 function run(processor::Processor)
+
+                            #===========================================
+                                        Parallel Processing
+                            ============================================#
+
     while processor.cores[1].pc<=length(processor.cores[1].program)&&processor.cores[2].pc<=(length(processor.cores[2].program)+length(processor.cores[1].program))
         processor.clock+=1
         Decode_and_execute(processor.cores[1],processor.memory)
@@ -39,4 +55,18 @@ function run(processor::Processor)
         processor.clock+=1
         Decode_and_execute(processor.cores[2],processor.memory)
     end
+
+                            #===========================================
+                                        Sequential Processing
+                                    (Uncomment the below two loops)
+                            ============================================#
+
+    # while processor.cores[1].pc<=length(processor.cores[1].program)
+    #     processor.clock+=1
+    #     Decode_and_execute(processor.cores[1],processor.memory)
+    # end
+    # while processor.cores[2].pc<=(length(processor.cores[2].program)+length(processor.cores[1].program))
+    #     processor.clock+=1
+    #     Decode_and_execute(processor.cores[2],processor.memory)
+    # end
 end

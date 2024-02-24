@@ -1,5 +1,7 @@
 include("Processor_Core_Init.jl")
 
+#= 30 Helper Functions have been defined =#
+
 operator_array = ["add","sub","sll","xor","srl","sra","or","and","addi","xori","ori","andi","slli","srli","srai","li","la","andi","mv","lb","lh","lw","lbu","lhu","sb","sh","sw","beq","bne","blt","bgt","bge","bltu","bgeu","lui","jal","jalr","j",]
 
 instruction_formats = [
@@ -13,7 +15,6 @@ instruction_formats = [
     "1100111" => "JALR",  # Jump and Link Register Format
     "1111111" => "ECALL",  # ecall format
 ]
-
 R_format_instructions = [
     "000" => "ADD/SUB",
     "001" => "SLL",
@@ -24,7 +25,6 @@ R_format_instructions = [
     "110" => "OR",
     "111" => "AND",
 ]
-
 I_format_instructions = [
     "000" => "ADDI",
     "001" => "SLLI",
@@ -44,13 +44,11 @@ L_format_instructions = [
     "101" => "LHU",
     "110" => "LS",
 ]
-
 S_format_instructions = [
     "000" => "SB",
     "001" => "SH",
     "010" => "SW",
 ]
-
 B_format_instructions = [
     "000" => "BEQ",
     "001" => "BNE",
@@ -76,7 +74,6 @@ function replace_wrong_nline_with_right_nline(input_string::String)
     return replace(input_string, "\\n" => "\n")
 end
 
-
 function mem_pc_to_row(mem_pc::Int)
     row = mem_pc/4
 
@@ -91,7 +88,6 @@ function mem_pc_to_col(mem_pc::Int)
     end 
     return col
 end
-
 
 function find_index_for_label(label_array, label)
     for row in label_array
@@ -114,6 +110,10 @@ function find_and_remove(search_string, string_array)
     end
 end
 
+#============================================================================================================
+                                    Integer to Binary String Helper Functions
+=============================================================================================================#
+ 
 function int_to_5bit_bin(n::Int)
     binary_str = string(n, base=2, pad=5)
     return binary_str
@@ -153,7 +153,6 @@ function int_to_signed_20bit_bin_string(value::Int)
     return bin_str
 end
 
-
 function int_to_32bit_bin(n::Int)
     binary_str_20bit = string(n + 2^20, base=2)[2:end]
     binary_str_32bit = string("0" ^ (32 - length(binary_str_20bit)), binary_str_20bit)
@@ -184,8 +183,6 @@ function binary_to_uint8(binary::String)
     return result
 end
 
-
-
 function string_to_binary_8bit_string_array(str::String)
     hex_array = transcode(UInt8, str)
     binary_array = [bitstring(UInt8(x)) for x in hex_array]
@@ -202,14 +199,17 @@ function binary_to_letters(binary_strings::Vector{String})
     return join(letters)
 end
 
-
 function show_hex(value)
     hex_str = string(value, base=16)
     return lpad(hex_str, 2, '0')
 end
 
+#============================================================================================================
+                                    Display Memory Helper Function
+=============================================================================================================#
+ 
 
-function show(proc::Processor, start_row::Int, end_row::Int)
+function Diplay_Memory(proc::Processor, start_row::Int, end_row::Int)
     println("Processor Memory (in hex):")
     
     # Ensure start_row and end_row are within the valid range
@@ -227,9 +227,6 @@ function show(proc::Processor, start_row::Int, end_row::Int)
         end
     end
 end
-
-#This function extracts the entire word, i.e. 32 bits from the initial index
-#considering Big Endian
 
 function in_memory_place_word(memory,row,col,bin)       #Storing 32 bits
 
@@ -322,12 +319,6 @@ function return_word_from_memory(memory,row,col)       #returns 32 bits from the
     return value
 end
 
-function address_to_row_col(address)
-    row = div(address,4) + 1
-    col = (address%4) + 1
-    return row,col
-end
-
 function return_word_from_memory_littleEndian(memory,address)
     row = div(address,4) + 1
     col = (address%4) + 1
@@ -363,4 +354,10 @@ function return_word_from_memory_littleEndian(memory,address)
         temp = temp | ((UInt32(memory[row,col]))<<24)
     end
     return temp
+end
+
+function address_to_row_col(address)
+    row = div(address,4) + 1
+    col = (address%4) + 1
+    return row,col
 end
