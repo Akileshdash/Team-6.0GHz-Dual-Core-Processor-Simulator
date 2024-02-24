@@ -3,7 +3,7 @@ Computer Organization Project
 
 # Minutes of Meeting
 
-##  Meeting 4 : Date : 24 Feb 2024
+##  Meeting 8 : Date : 24 Feb 2024
 
 
 ##  Meeting 7 : Date : 23 Feb 2024
