@@ -8,19 +8,19 @@ function encoding_all_instructions_to_memory(sim)
     final_text_inst = text_inst_parser(text_instructions)
     data_inst_final, variable_array = data_inst_parser(data_instructions)
 
-    label_array = Vector{Tuple{String, Int}}()
+    label_array_1 = Vector{Tuple{String, Int}}()
     for str in final_text_inst
         if !(in(split(str,' ')[1], operator_array))
             label = split(str,' ')[1]
             index = find_and_remove(label, final_text_inst)
-            push!(label_array, (label, index))
+            push!(label_array_1, (label, index))
         end
     end
 
     sim.cores[1].program = final_text_inst
     variable_address_array = alloc_dataSeg_in_memory(sim.memory, data_inst_final, sim.cores[1], variable_array)
     variable_address_array .-=1
-    initial_index = encoding_Instructions(sim.cores[1],sim.memory,initial_index,variable_array,label_array,variable_address_array)
+    initial_index = encoding_Instructions(sim.cores[1],sim.memory,initial_index,variable_array,label_array_1,variable_address_array)
 
     #===========================================================================#
     
@@ -29,19 +29,19 @@ function encoding_all_instructions_to_memory(sim)
     final_text_inst = text_inst_parser(text_instructions)
     data_inst_final, variable_array = data_inst_parser(data_instructions)
 
-    label_array = Vector{Tuple{String, Int}}()
+    label_array_2 = Vector{Tuple{String, Int}}()
     for str in final_text_inst
         if !(in(split(str,' ')[1], operator_array))
             label = split(str,' ')[1]
-            index = find_and_remove(label, final_text_inst)
-            push!(label_array, (label, index))
+            index = find_and_remove(label, final_text_inst) + initial_index -1
+            push!(label_array_2, (label, index))
         end
     end
 
     sim.cores[2].program = final_text_inst
     variable_address_array = alloc_dataSeg_in_memory(sim.memory, data_inst_final, sim.cores[2], variable_array)
     variable_address_array .-=1
-    initial_index = encoding_Instructions(sim.cores[2],sim.memory,initial_index,variable_array,label_array,variable_address_array)
+    initial_index = encoding_Instructions(sim.cores[2],sim.memory,initial_index,variable_array,label_array_2,variable_address_array)
 end
 
 

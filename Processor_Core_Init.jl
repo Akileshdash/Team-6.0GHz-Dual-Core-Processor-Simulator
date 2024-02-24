@@ -26,13 +26,17 @@ function processor_Init()
 end
 
 function run(processor::Processor)
+    while processor.cores[1].pc<=length(processor.cores[1].program)&&processor.cores[2].pc<=(length(processor.cores[2].program)+length(processor.cores[1].program))
+        processor.clock+=1
+        Decode_and_execute(processor.cores[1],processor.memory)
+        Decode_and_execute(processor.cores[2],processor.memory)
+    end
     while processor.cores[1].pc<=length(processor.cores[1].program)
         processor.clock+=1
         Decode_and_execute(processor.cores[1],processor.memory)
     end
-    # while processor.cores[2].pc<=(length(processor.cores[2].program)+length(processor.cores[1].program))
-    #     println(processor.clock)
-    #     processor.clock+=1
-    #     Decode_and_execute(processor.cores[2],processor.memory)
-    # end
+    while processor.cores[2].pc<=(length(processor.cores[2].program)+length(processor.cores[1].program))
+        processor.clock+=1
+        Decode_and_execute(processor.cores[2],processor.memory)
+    end
 end

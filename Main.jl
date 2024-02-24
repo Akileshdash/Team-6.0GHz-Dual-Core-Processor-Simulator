@@ -8,10 +8,11 @@ file_path_2 = "./test_core2.asm"
 sim = processor_Init()  
 encoding_all_instructions_to_memory(sim)
 
-show(sim,769,789)
-println(".\n.\n.\n")
-show(sim,512,532)
+# show(sim,769,789)
+# println(".\n.\n.\n")
+# show(sim,512,532)
 
+show(sim,1,60)
 run(sim)
 show(sim,769,789)
 println(".\n.\n.\n")
