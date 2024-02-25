@@ -4,7 +4,7 @@ include("Processor_Core_Init.jl")
                     Executing R Format Operations          
 ======================================================================#
  
-function  Execute_Operation_R(operator,rd,rs1,rs2,core::Core1,memory,Instruction_to_decode)
+function  Execute_Operation_R(operator,rd,rs1,rs2,core::Core_Object,memory,Instruction_to_decode)
    if operator=="ADD/SUB"
         if Int(Instruction_to_decode[2])-48==0
             #Add operation
@@ -36,7 +36,7 @@ end
                     Executing I Format Operations          
 ======================================================================#
  
-function  Execute_Operation_I(operator,rd,rs1,imm_value,core::Core1,memory,Instruction_to_decode)
+function  Execute_Operation_I(operator,rd,rs1,imm_value,core::Core_Object,memory,Instruction_to_decode)
     if operator=="ADDI"
         core.registers[rd] = core.registers[rs1] + imm_value
     elseif operator=="XORI"
@@ -63,7 +63,7 @@ end
                     Executing L Format Operations          
 ======================================================================#
  
-function Execute_Operation_L(operator,rd,rs,offset,core::Core1,memory,Instruction_to_decode)
+function Execute_Operation_L(operator,rd,rs,offset,core::Core_Object,memory,Instruction_to_decode)
     if operator=="LA"
         address = parse(UInt,Instruction_to_decode[1:12], base=2)
         core.registers[rd] = address
@@ -102,7 +102,7 @@ end
                     Executing B Format Operations          
 ======================================================================#
  
-function Execute_Operation_B(operator,rs1,rs2,offset,core::Core1,memory,Instruction_to_decode)
+function Execute_Operation_B(operator,rs1,rs2,offset,core::Core_Object,memory,Instruction_to_decode)
     if operator=="BEQ"
         if core.registers[rs1] == core.registers[rs2]
             core.pc = core.pc +  offset - 1     #-1 bcz in decode_execute function we are incrementing pc again

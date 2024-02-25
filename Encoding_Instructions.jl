@@ -10,7 +10,7 @@ function encoding_all_instructions_to_memory(sim)
     #For core 1
     text_instructions,data_instructions = parse_assembly(file_path_1)
     final_text_inst = text_inst_parser(text_instructions)
-    data_inst_final, variable_array = data_inst_parser(data_instructions)
+    final_data_inst, variable_array = data_inst_parser(data_instructions)
 
     label_array_1 = Vector{Tuple{String, Int}}()
     for str in final_text_inst
@@ -22,7 +22,7 @@ function encoding_all_instructions_to_memory(sim)
     end
 
     sim.cores[1].program = final_text_inst
-    variable_address_array = alloc_dataSeg_in_memory(sim.memory, data_inst_final, sim.cores[1], variable_array)
+    variable_address_array = alloc_dataSeg_in_memory(sim.memory, final_data_inst, sim.cores[1], variable_array)
     variable_address_array .-=1
     initial_index = encoding_Instructions(sim.cores[1],sim.memory,initial_index,variable_array,label_array_1,variable_address_array)
 
@@ -31,7 +31,7 @@ function encoding_all_instructions_to_memory(sim)
     #For core 2
     text_instructions,data_instructions = parse_assembly(file_path_2)
     final_text_inst = text_inst_parser(text_instructions)
-    data_inst_final, variable_array = data_inst_parser(data_instructions)
+    final_data_inst, variable_array = data_inst_parser(data_instructions)
 
     label_array_2 = Vector{Tuple{String, Int}}()
     for str in final_text_inst
@@ -43,17 +43,17 @@ function encoding_all_instructions_to_memory(sim)
     end
 
     sim.cores[2].program = final_text_inst
-    variable_address_array = alloc_dataSeg_in_memory(sim.memory, data_inst_final, sim.cores[2], variable_array)
+    variable_address_array = alloc_dataSeg_in_memory(sim.memory, final_data_inst, sim.cores[2], variable_array)
     variable_address_array .-=1
     initial_index = encoding_Instructions(sim.cores[2],sim.memory,initial_index,variable_array,label_array_2,variable_address_array)
 end
 
 #==========================================================================================================
-                                Encoding each instrutcions to memory
+                                Encoding each instrutcion to memory
                                   ( Called by the above Function )
 ===========================================================================================================#
 
-function encoding_Instructions(core::Core1, memory,initial_index,variable_array,label_array,variable_address_array)
+function encoding_Instructions(core::Core_Object, memory,initial_index,variable_array,label_array,variable_address_array)
     memory_index = core.pc = initial_index
     while (core.pc-initial_index+1)<=length(core.program)                      
         parts = split(core.program[core.pc-initial_index+1],' ') 
@@ -248,7 +248,6 @@ function encoding_Instructions(core::Core1, memory,initial_index,variable_array,
             variable_name = parts[3]
             index = findfirst(x -> x == variable_name, variable_array)
             address = variable_address_array[index]
-            #println(variable_address_array[index])
             L_format_instruction = int_to_signed_12bit_bin(address)*int_to_5bit_bin(rs-1)*"011"*int_to_5bit_bin(rd-1)*L_format_instruction
             in_memory_place_word(memory,memory_index,1,L_format_instruction)
     
@@ -298,7 +297,6 @@ function encoding_Instructions(core::Core1, memory,initial_index,variable_array,
                 rs = match(r"\(([^)]+)\)", parts[3])
                 rs = rs.captures[1][2:end]
                 rs = parse(Int, rs)+1
-                #println("encoding lw : rd = ",rd-1," rs = ",rs-1," offset = ",offset)
                 L_format_instruction = int_to_signed_12bit_bin(offset)*int_to_5bit_bin(rs-1)*"010"*int_to_5bit_bin(rd-1)*L_format_instruction
             end
             in_memory_place_word(memory,memory_index,1,L_format_instruction)
@@ -414,7 +412,6 @@ function encoding_Instructions(core::Core1, memory,initial_index,variable_array,
             offset = 4*(index - core.pc)         #Offset is in bytes
             imm = int_to_signed_13bit_bin(offset)
             B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"100"*imm[9:12]*imm[2]*B_format_instruction
-            #println("BLT ",parts[2]," ",parts[3]," ",offset," ",B_format_instruction)
             in_memory_place_word(memory,memory_index,1,B_format_instruction)
 
         #25    #BGT  rs1 rs2 label
@@ -505,8 +502,6 @@ function encoding_Instructions(core::Core1, memory,initial_index,variable_array,
         #31     #JALR rs        # store in x1 core.pc+1
             #JALR rd, rs, offset
         elseif opcode == "JALR"
-            #println(parts)
-            #println(length(parts))
             if length(parts)==2
                 rs = parse(Int, parts[2][2:end])
                 rd = 1

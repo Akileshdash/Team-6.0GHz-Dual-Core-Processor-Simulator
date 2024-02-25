@@ -3,7 +3,7 @@
                                         Processor Initializing
 ===========================================================================================================#
 
-mutable struct Core1
+mutable struct Core_Object
     id::Int
     registers::Array{Int, 1}
     pc::Int
@@ -13,14 +13,14 @@ end
 mutable struct Processor
     memory::Array{UInt8,2}
     clock::Int
-    cores::Array{Core1,1}
+    cores::Array{Core_Object,1}
 end
 
 function core_Init(id)
     registers = fill(0, 32)
     pc = 1
     program = []
-    return Core1(id,registers, pc, program)
+    return Core_Object(id,registers, pc, program)
 end
 
 function processor_Init()

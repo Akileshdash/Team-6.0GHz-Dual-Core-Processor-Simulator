@@ -1,5 +1,10 @@
 include("Helper_Functions.jl")
 
+#========================================================
+            Preliminary Parsing of the ASM
+( Removing Comments , Separating Data and Text Instructions )
+========================================================#
+
 function parse_assembly(file_path::String)
     text_instructions = String[]
     data_instructions = String[]
@@ -58,7 +63,8 @@ function parse_assembly(file_path::String)
 end
 
 #========================================================
-            Text Instruction Parsing
+                Text Instruction Parsing
+        ( Replacing Commas and Colons with spaces)
 ========================================================#
 
 function text_inst_parser(text_instructions::Vector{String})
@@ -68,7 +74,6 @@ function text_inst_parser(text_instructions::Vector{String})
         modified_str = replace_commas_with_spaces(mutable_str)
         final_str = replace_colon_with_space(modified_str)
         push!(list, strip(final_str))
-        #println(modified_str, "  ", final_str)
     end
 
     return list
@@ -86,10 +91,8 @@ function data_inst_parser(data_instructions::Vector{String})
         modified_str = replace_commas_with_spaces(mutable_str)
         final_str = replace_colon_with_space(modified_str)
         push!(data_instructions_2, final_str)
-        #println(mutable_str, "\t", final_str)
     end
     
-    # println(data_instructions_2)
 
     varibale_array = []
     
@@ -144,15 +147,15 @@ end
             Data varibles Allocation
 ========================================================#
 
-function alloc_dataSeg_in_memory(memory::Array{UInt8,2}, data_inst_final::Vector{Any}, core::Core1, variable_array::Vector{Any})
+function alloc_dataSeg_in_memory(memory::Array{UInt8,2}, final_data_inst::Vector{Any}, core::Core_Object, variable_array::Vector{Any})
     
     variable_address_array = []
     mem_pc = 2049 + 1024*(core.id-1)
     string_flag = false
     word_flag = false
 
-    for i in eachindex(data_inst_final)
-        str = data_inst_final[i]
+    for i in eachindex(final_data_inst)
+        str = final_data_inst[i]
         if str == ".word" 
             word_flag = true
             string_flag = false
