@@ -56,11 +56,11 @@ run(sim)
 #Display a block of the memory of processor (syntax explained at the top of this file)
 #Check the file "Helper_Functions" for this function
 println("\nData Segment of Core 2 : \n")
-Diplay_Memory(sim,769,790)
+Display_Memory(sim,769,790)
 println("\nData Segment of Core 1 : \n")
-Diplay_Memory(sim,513,535)
+Display_Memory(sim,513,535)
 println("\nCode Segment : \n")
-Diplay_Memory(sim,1,20)
+Display_Memory(sim,1,20)
 
 #Printing the total number of clocks the processor has taken to execute both the cores instructions 
 println("\nNumber of clocks taken for comuting both instructions ( parallely ) = ",sim.clock)

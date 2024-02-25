@@ -209,7 +209,7 @@ end
 =============================================================================================================#
  
 
-function Diplay_Memory(proc::Processor, start_row::Int, end_row::Int)
+function Display_Memory(proc::Processor, start_row::Int, end_row::Int)
     println("Processor Memory (in hex):")
     
     # Ensure start_row and end_row are within the valid range
