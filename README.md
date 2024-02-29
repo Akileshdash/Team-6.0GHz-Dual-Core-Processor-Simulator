@@ -40,57 +40,57 @@ julia main.jl
       - For Core 2, instructions are stored after the instructions of Core 1 (starting_row = next row after the last instruction of Core 1).
 
 ## Minutes of Meetings
-### Meeting 8: Date: 29 Feb 2024
-1. 5 stage cycle separation and Makefile - Preet
-    a. For IF , we need to create a new special purpose register
-2. pipelining
-    i. We need to store a new temporary register
-        a. It is a special purpose register which we need to store in the each of the core itself.
-   ii.For each function we need to find the cycles/stages omitted - LavKush 
-  iii.Stalls
-    a.Predictions   -   Static or Dynamic Prediction : 1 or 2 bit predictor 
-        1.break statements
-        2.jump statements
-    b.Hazards
-        1.write after read 
-        2.read after write
-        3.write after write
-    i.For each function we need to find the cycles/stages omitted - LavKush
-3. Data forwading and IPC and Hazards(conceptual) - Akilesh
+### `Meeting 8: Date: 29 Feb 2024 `
+- 5 stage cycle separation and Makefile - Preet
+    - For IF , we need to create a new special purpose register
+- pipelining
+    - We need to store a new temporary register
+        - It is a special purpose register which we need to store in the each of the core itself.
+    - For each function we need to find the cycles/stages omitted - LavKush
+    - Stalls
+        - Predictions   -   Static or Dynamic Prediction : 1 or 2 bit predictor 
+            - break statements
+            - jump statements
+        - Hazards
+            - write after read 
+            - read after write
+            - write after write
+        - For each function we need to find the cycles/stages omitted - LavKush
+- Data forwading and IPC and Hazards(conceptual) - Akilesh
 
 
-### Meeting 7: Date: 23 Feb 2024
+### `Meeting 7: Date: 23 Feb 2024`
 - Restructured code for improved readability.
 - Successfully executed **Selection-Sort** and **Bubble-Sort** on our simulator.
 - Planned implementation of GUI the following day.
 - Planned to test the robustness of the simulator the next day.
 
-### Meeting 6: Date: 22 Feb 2024
+### `Meeting 6: Date: 22 Feb 2024`
 - Successfully implemented parsing of **.data** and storing it in memory.
 - Completed encoding and decoding of all instructions.
 - Minor bug fixes.
 
-### Meeting 5: Date: 21 Feb 2024
+### `Meeting 5: Date: 21 Feb 2024`
 - Implemented **Selection-Sort** in Assembly Language.
 
-### Meeting 4: Date: 20 Feb 2024
+### `Meeting 4: Date: 20 Feb 2024`
 - Implemented **.data** parsing for **.word** and **.string**.
 - Added necessary helper functions.
 - Implemented transcoding algorithm to store strings.
 - Started implementation of encoded instructions into memory.
 
-### Meeting 3: Date: 19 Feb 2024
+### `Meeting 3: Date: 19 Feb 2024`
 - Implemented LW using Big-Endian Format and LB.
 - Implemented JAL and JALR.
 - Added Integer to Binary String functions.
 
-### Meeting 2: Date: 18 Feb 2024
+### `Meeting 2: Date: 18 Feb 2024`
 - Resolved the issue raised earlier.
 - Implemented parser.jl (Analyzing data_instruction and text_instructions).
 - Successfully implemented **Bubble-Sort** in Assembly Language.
 - Added instructions addi and sub.
 
-### Meeting 1: Date: 14 Feb 2024
+### `Meeting 1: Date: 14 Feb 2024`
 #### _Skipping Prom Night for this dual-core processor_
 - **Members present:** Akilesh, Lavkush Kumar, and Preet Madhav Bobde.
 - **Decisions:** 
