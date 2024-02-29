@@ -40,6 +40,24 @@ julia main.jl
       - For Core 2, instructions are stored after the instructions of Core 1 (starting_row = next row after the last instruction of Core 1).
 
 ## Minutes of Meetings
+### Meeting 8: Date: 29 Feb 2024
+1. 5 stage cycle separation and Makefile - Preet
+    a. For IF , we need to create a new special purpose register
+2. pipelining
+    i. We need to store a new temporary register
+        a. It is a special purpose register which we need to store in the each of the core itself.
+   ii.For each function we need to find the cycles/stages omitted - LavKush 
+  iii.Stalls
+    a.Predictions   -   Static or Dynamic Prediction : 1 or 2 bit predictor 
+        1.break statements
+        2.jump statements
+    b.Hazards
+        1.write after read 
+        2.read after write
+        3.write after write
+    i.For each function we need to find the cycles/stages omitted - LavKush
+3. Data forwading and IPC and Hazards(conceptual) - Akilesh
+
 
 ### Meeting 7: Date: 23 Feb 2024
 - Restructured code for improved readability.
