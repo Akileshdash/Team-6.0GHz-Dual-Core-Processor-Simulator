@@ -57,7 +57,91 @@ B_format_instructions = [
     "110" => "BLTU",
     "111" => "BGEU",
 ]
-
+#==============================================================================================#
+instruction_formats_2 = Dict(
+    "0110011" => "R",
+    "0010011" => "I",
+    "0000011" => "L",  # Load Format
+    "0100011" => "S",  # Store Format
+    "1100011" => "B",  # Break Format
+    "0110111" => "U",  # Upper Immediate Format
+    "1101111" => "JAL",  # Jump Format
+    "1100111" => "JALR",  # Jump and Link Register Format
+    "1111111" => "ECALL",  # ecall format
+)
+operator_dict = Dict(
+    #R
+    "0110011" => Dict(
+        "000" => "ADD/SUB",
+        "001" => "SLL",
+        "010" => "SLT",
+        "011" => "SLTU",
+        "100" => "XOR",
+        "101" => "SRL/SRA",
+        "110" => "OR",
+        "111" => "AND",
+    ),
+    #I
+    "0010011" => Dict(
+        "000" => "ADDI",
+        "001" => "SLLI",
+        "010" => "SLTI",
+        "011" => "SLTIU",
+        "100" => "XORI",
+        "101" => "SRLI/SRAI",
+        "110" => "OR",
+        "111" => "ANDI",
+    ),
+    #L
+    "0000011" => Dict(
+        "000" => "LB",
+        "001" => "LH",
+        "010" => "LW",
+        "011" => "LA",
+        "100" => "LBU",
+        "101" => "LHU",
+        "110" => "LS",
+    ),
+    #S
+    "0100011" => Dict(
+        "000" => "SB",
+        "001" => "SH",
+        "010" => "SW",
+    ),
+    #B
+    "1100011" =>Dict(
+        "000" => "BEQ",
+        "001" => "BNE",
+        "100" => "BLT",
+        "101" => "BGE",
+        "110" => "BLTU",
+        "111" => "BGEU",
+    ),
+)
+operator_dict_RI = Dict(
+    #R
+    "0110011" => Dict(
+        "000" => "ADD/SUB",
+        "001" => "SLL",
+        "010" => "SLT",
+        "011" => "SLTU",
+        "100" => "XOR",
+        "101" => "SRL/SRA",
+        "110" => "OR",
+        "111" => "AND",
+    ),
+    #I
+    "0010011" => Dict(
+        "000" => "ADDI",
+        "001" => "SLLI",
+        "010" => "SLTI",
+        "011" => "SLTIU",
+        "100" => "XORI",
+        "101" => "SRLI/SRAI",
+        "110" => "OR",
+        "111" => "ANDI",
+    ),
+)
 function replace_commas_with_spaces(input_string::String)
     return replace(input_string, "," => " ")
 end

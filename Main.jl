@@ -35,8 +35,9 @@
 =#
 
 include("parser.jl")
-include("Decoding_Instructions.jl")
+# include("Decoding_Instructions.jl")
 include("Encoding_Instructions.jl")
+include("Stages.jl")
 
 file_path_1 = "./Assembly_Codes/Bubble_Sort.asm"
 file_path_2 = "./Assembly_Codes/Selection_Sort.asm"
@@ -48,6 +49,8 @@ sim = processor_Init()
 #Check the file "Encoding_Instructions.jl" for this function
 encoding_all_instructions_to_memory(sim)
 
+println("Encoding Done")
+
 #Now we are running the processor ( Check the file "Processor_Core_Init.jl" to run the processor parallely or sequentially)
 run(sim)
 
@@ -55,13 +58,15 @@ run(sim)
 
 #Display a block of the memory of processor (syntax explained at the top of this file)
 #Check the file "Helper_Functions" for this function
-println("\nData Segment of Core 2 : \n")
-Display_Memory(sim,769,790)
-println("\nData Segment of Core 1 : \n")
-Display_Memory(sim,513,535)
-println("\nCode Segment : \n")
-Display_Memory(sim,1,20)
+# println("\nData Segment of Core 2 : \n")
+# Display_Memory(sim,769,790)
+# println("\nData Segment of Core 1 : \n")
+# Display_Memory(sim,513,535)
+# println("\nCode Segment : \n")
+# Display_Memory(sim,1,20)
 
+println(sim.cores[1].registers)
+println(sim.clock)
 #Printing the total number of clocks the processor has taken to execute both the cores instructions 
-println("\nNumber of clocks taken for comuting both instructions ( parallely ) = ",sim.clock)
+# println("\nNumber of clocks taken for comuting both instructions ( parallely ) = ",sim.clock)
 
