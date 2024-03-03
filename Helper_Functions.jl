@@ -117,6 +117,14 @@ operator_dict = Dict(
         "110" => "BLTU",
         "111" => "BGEU",
     ),
+    #JAL
+    "1101111" => Dict(
+        "anything" => "JAL",
+    ),
+    #JALR
+    "1100111" => Dict(
+        "anything" => "JALR",
+    ),
 )
 operator_dict_RI = Dict(
     #R
@@ -142,6 +150,18 @@ operator_dict_RI = Dict(
         "111" => "ANDI",
     ),
 )
+
+function get_instruction(opcode::AbstractString, func3::AbstractString)
+    if opcode in keys(operator_dict) && func3 in keys(operator_dict[opcode])
+        return operator_dict[opcode][func3]
+    elseif opcode in keys(operator_dict)
+        return operator_dict[opcode]["anything"]
+    else
+        return "Unknown Instruction"
+    end
+end
+
+
 function replace_commas_with_spaces(input_string::String)
     return replace(input_string, "," => " ")
 end

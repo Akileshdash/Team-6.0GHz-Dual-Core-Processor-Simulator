@@ -227,9 +227,9 @@ function encoding_Instructions(core::Core_Object, memory,initial_index,variable_
 
         #MV rd rs               # same as ADDI rd rs 0
         elseif opcode == "MV"
-            rd = parse(Int, parts[2][2:end])+1
-            rs = parse(Int, parts[3][2:end])+1
-            I_format_instruction = int_to_signed_12bit_bin(0)*int_to_5bit_bin(rs-1)*"000"*int_to_5bit_bin(rd-1)*I_format_instruction
+            rd = parse(Int, parts[2][2:end])
+            rs = parse(Int, parts[3][2:end])
+            I_format_instruction = int_to_signed_12bit_bin(0)*int_to_5bit_bin(rs)*"000"*int_to_5bit_bin(rd)*I_format_instruction
             in_memory_place_word(memory,memory_index,1,I_format_instruction)
 
 
@@ -280,24 +280,24 @@ function encoding_Instructions(core::Core_Object, memory,initial_index,variable_
         elseif opcode == "LW"
             #Lets give this opcode name as LS i.e Load string
             if parts[2][1]=='a'
-                rd = parse(Int, parts[2][2:end])+11
+                rd = parse(Int, parts[2][2:end])+10
             else    
-                rd = parse(Int, parts[2][2:end])+1
+                rd = parse(Int, parts[2][2:end])
             end
             if parts[3] in variable_array
-                rs = 1
+                rs = 0
                 variable_name = parts[3]
                 index = findfirst(x -> x == variable_name, variable_array)
                 address = variable_address_array[index]
                 #L_format_instruction = int_to_signed_12bit_bin(offset)*int_to_5bit_bin(rs-1)*"010"*int_to_5bit_bin(rd-1)*L_format_instruction
-                L_format_instruction = int_to_signed_12bit_bin(address)*int_to_5bit_bin(rs-1)*"110"*int_to_5bit_bin(rd-1)*L_format_instruction
+                L_format_instruction = int_to_signed_12bit_bin(address)*int_to_5bit_bin(rs)*"010"*int_to_5bit_bin(rd)*L_format_instruction
             else
                 offset = match(r"\d+", parts[3])
                 offset = parse(Int, offset.match)
                 rs = match(r"\(([^)]+)\)", parts[3])
                 rs = rs.captures[1][2:end]
-                rs = parse(Int, rs)+1
-                L_format_instruction = int_to_signed_12bit_bin(offset)*int_to_5bit_bin(rs-1)*"010"*int_to_5bit_bin(rd-1)*L_format_instruction
+                rs = parse(Int, rs)
+                L_format_instruction = int_to_signed_12bit_bin(offset)*int_to_5bit_bin(rs)*"010"*int_to_5bit_bin(rd)*L_format_instruction
             end
             in_memory_place_word(memory,memory_index,1,L_format_instruction)
 
@@ -390,7 +390,7 @@ function encoding_Instructions(core::Core_Object, memory,initial_index,variable_
             offset = 4*(index - core.pc)         #Offset is in bytes)
             imm = int_to_signed_13bit_bin(offset)
             # B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"000"*imm[9:12]*imm[2]*B_format_instruction
-            B_format_instruction = imm*int_to_5bit_bin(rs1-1)*"000"*int_to_5bit_bin(rs2-1)*B_format_instruction
+            B_format_instruction = imm[1:12]*int_to_5bit_bin(rs1-1)*"000"*int_to_5bit_bin(rs2-1)*B_format_instruction
             in_memory_place_word(memory,memory_index,1,B_format_instruction)
 
         #24    #BNE  rs1 rs2 label
@@ -403,7 +403,7 @@ function encoding_Instructions(core::Core_Object, memory,initial_index,variable_
             offset = 4*(index - core.pc)         #Offset is in bytes)
             imm = int_to_signed_13bit_bin(offset)
             #B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"001"*imm[9:12]*imm[2]*B_format_instruction
-            B_format_instruction = imm*int_to_5bit_bin(rs1-1)*"001"*int_to_5bit_bin(rs2-1)*B_format_instruction
+            B_format_instruction = imm[1:12]*int_to_5bit_bin(rs1-1)*"001"*int_to_5bit_bin(rs2-1)*B_format_instruction
             in_memory_place_word(memory,memory_index,1,B_format_instruction)
 
         #25    #BLT  rs1 rs2 label
@@ -413,23 +413,23 @@ function encoding_Instructions(core::Core_Object, memory,initial_index,variable_
             rs2 = parse(Int, parts[3][2:end])+1
             label = parts[4]
             index = find_index_for_label(label_array,label)
-            offset = 4*(index - core.pc)         #Offset is in bytes
+            offset = 4*(index - core.pc)         #Since if offset is odd, then we are ignoring the last bit   
             imm = int_to_signed_13bit_bin(offset)
             #B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"100"*imm[9:12]*imm[2]*B_format_instruction
-            B_format_instruction = imm*int_to_5bit_bin(rs1-1)*"100"*int_to_5bit_bin(rs2-1)*B_format_instruction
+            B_format_instruction = imm[1:12]*int_to_5bit_bin(rs1-1)*"100"*int_to_5bit_bin(rs2-1)*B_format_instruction
             in_memory_place_word(memory,memory_index,1,B_format_instruction)
 
         #25    #BGT  rs1 rs2 label
         #BLT  rs2 rs1 offset
         elseif opcode == "BGT"
-            rs1 = parse(Int, parts[2][2:end])+1
-            rs2 = parse(Int, parts[3][2:end])+1
+            rs1 = parse(Int, parts[2][2:end])
+            rs2 = parse(Int, parts[3][2:end])
             label = parts[4]
             index = find_index_for_label(label_array,label)
             offset = 4*(index - core.pc)         #Offset is in bytes
             imm = int_to_signed_13bit_bin(offset)
             #B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs1-1)*int_to_5bit_bin(rs2-1)*"100"*imm[9:12]*imm[2]*B_format_instruction
-            B_format_instruction = imm*int_to_5bit_bin(rs2-1)*"100"*int_to_5bit_bin(rs1-1)*B_format_instruction
+            B_format_instruction = imm[1:12]*int_to_5bit_bin(rs2)*"100"*int_to_5bit_bin(rs1)*B_format_instruction
             in_memory_place_word(memory,memory_index,1,B_format_instruction)
 
         #26    #BGE  rs1 rs2 offset
@@ -441,18 +441,18 @@ function encoding_Instructions(core::Core_Object, memory,initial_index,variable_
             offset = 4*(index - core.pc)         #Offset is in bytes
             imm = int_to_signed_13bit_bin(offset)
             #B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs1-1)*int_to_5bit_bin(rs2-1)*"101"*imm[9:12]*imm[2]*B_format_instruction
-            B_format_instruction = imm*int_to_5bit_bin(rs1-1)*"101"*int_to_5bit_bin(rs2-1)*B_format_instruction
+            B_format_instruction = imm[1:12]*int_to_5bit_bin(rs1-1)*"101"*int_to_5bit_bin(rs2-1)*B_format_instruction
             in_memory_place_word(memory,memory_index,1,B_format_instruction)
 
         #27    #BLTU  rs1 rs2 offset
         elseif opcode == "BLTU"
-            rs1 = parse(Int, parts[2][2:end])+1
-            rs2 = parse(Int, parts[3][2:end])+1
+            rs1 = parse(Int, parts[2][2:end])
+            rs2 = parse(Int, parts[3][2:end])
             offset = parse(Int, parts[4]) 
             imm = int_to_signed_12bit_bin(offset)
             imm = '0'*imm[1:11]
-            B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"110"*imm[9:12]*imm[2]*B_format_instruction
-            #B_format_instruction = imm*int_to_5bit_bin(rs1-1)*"001"*int_to_5bit_bin(rs2-1)*B_format_instruction
+            # B_format_instruction = imm[1]*imm[3:8]*int_to_5bit_bin(rs2-1)*int_to_5bit_bin(rs1-1)*"110"*imm[9:12]*imm[2]*B_format_instruction
+            B_format_instruction = imm*int_to_5bit_bin(rs1)*"110"*int_to_5bit_bin(rs2)*B_format_instruction
             #Function has to be written after Memory 2d Array is formed
 
         #28    #BGEU  rs1 rs2 offset

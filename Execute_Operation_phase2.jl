@@ -6,11 +6,10 @@ function  Execute_Operation(core::Core_Object)
     core.rs1+=1
     core.rs2+=1
     core.rd+=1
-
         #======================================================================
                             Executing R Format Operations          
         ======================================================================#
-     
+    
     if core.operator=="ADD/SUB"
         if Int(Instruction_to_decode[2])-48==0
             #Add operation
@@ -66,18 +65,14 @@ function  Execute_Operation(core::Core_Object)
         ======================================================================#
  
     elseif core.operator=="LA"
-        core.execution_reg = core.immediate_value_or_offset    # Storing Address
+        core.execution_reg = parse(UInt,Instruction_to_decode[1:12], base=2)    # Storing Address
     elseif core.operator=="LW"
-        core.execution_reg = core.registers[core.rs1]+core.immediate_value_or_offset       # Storing Address
-        # row,col = address_to_row_col(address)
-        # core.execution_reg = return_word_from_memory_littleEndian(memory,address)
+        offset = parse(UInt,Instruction_to_decode[1:12], base=2)
+        core.execution_reg = core.registers[core.rs1]+offset       # Storing Address
     elseif core.operator=="LS"
         core.execution_reg = core.immediate_value_or_offset             # Storing Address
-        # core.execution_reg = return_word_from_memory_littleEndian(memory,address)
     elseif core.operator=="LB"
         core.execution_reg = core.registers[core.rs1]+core.immediate_value_or_offset        # Storing Address
-        # row,col = address_to_row_col(address)
-        # core.execution_reg = memory[row,col]
 
         #======================================================================
                             Executing S Format Operations          
@@ -85,34 +80,53 @@ function  Execute_Operation(core::Core_Object)
  
     elseif core.operator=="SW"
         core.execution_reg = core.registers[core.rd] + core.immediate_value_or_offset           # Storing Address
-        # row,col = address_to_row_col(address)
-        # bin = int_to_32bit_bin(core.registers[rs])
-        # in_memory_place_word(memory,row,col,bin)
     elseif core.operator=="SB"
         core.execution_reg = core.registers[core.rd] + core.immediate_value_or_offset                # Storing Address
-        # row,col = address_to_row_col(address)
-        # memory[row,col] = core.registers[rs]
 
         #======================================================================
                             Executing B Format Operations          
         ======================================================================# 
 
     elseif core.operator=="BEQ"
+        offset = div(bin_string_to_signed_int(Instruction_to_decode[1:12]*"0"),4)
         if core.registers[core.rs1] == core.registers[core.rd]
-            core.pc = core.pc + core.immediate_value_or_offset      #-1 bcz in decode_execute function we are incrementing pc again
+            core.pc = core.pc + offset - 1      #Because after IF stage we are incrementing the pc
         end
     elseif core.operator=="BNE"
-        if core.registers[rs1] != core.registers[core.rd]
-            core.pc = core.pc + core.immediate_value_or_offset
+        offset = div(bin_string_to_signed_int(Instruction_to_decode[1:12]*"0"),4)
+        if core.registers[core.rs1] != core.registers[core.rd]
+            core.pc = core.pc + offset - 1        #Because after IF stage we are incrementing the pc
         end
     elseif core.operator=="BLT"
-        if core.registers[rs1] < core.registers[core.rd]
-            core.pc = core.pc + core.immediate_value_or_offset
+        offset = div(bin_string_to_signed_int(Instruction_to_decode[1:12]*"0"),4)
+        if core.registers[core.rs1] < core.registers[core.rd]
+            core.pc = core.pc + offset - 1      #Because after IF stage we are incrementing the pc
         end
     elseif core.operator=="BGE"
-        if core.registers[rs1] >= core.registers[core.rd]
-            core.pc = core.pc + core.immediate_value_or_offset
+        offset = div(bin_string_to_signed_int(Instruction_to_decode[1:12]*"0"),4)
+        if core.registers[core.rs1] >= core.registers[core.rd]
+            core.pc = core.pc + offset - 1      #Because after IF stage we are incrementing the pc
         end
+
+
+        #======================================================================
+                            Executing JAL Format Operations          
+        ======================================================================# 
+
+    elseif core.operator=="JAL"
+        # core.registers[core.rd] = core.pc + 1     To be done in WB stage
+        core.execution_reg = core.pc      #Because after IF stage we are incrementing the pc
+        offset = bin_string_to_signed_int(Instruction_to_decode[1:20])
+        core.pc = core.pc + offset  - 1
+
+        #======================================================================
+                            Executing JALR Format Operations          
+        ======================================================================# 
+
+    elseif instruction_type=="JALR"
+        #core.registers[core.rd] = core.pc + 1 To be done in WB stage
+        core.execution_reg = core.pc      #Because after IF stage we are incrementing the pc
+        core.pc = core.registers[core.rs1] + core.immediate_value_or_offset
     end
  end
  

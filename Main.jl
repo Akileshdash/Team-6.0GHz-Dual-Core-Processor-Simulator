@@ -49,8 +49,6 @@ sim = processor_Init()
 #Check the file "Encoding_Instructions.jl" for this function
 encoding_all_instructions_to_memory(sim)
 
-println("Encoding Done")
-
 #Now we are running the processor ( Check the file "Processor_Core_Init.jl" to run the processor parallely or sequentially)
 run(sim)
 
@@ -60,8 +58,8 @@ run(sim)
 #Check the file "Helper_Functions" for this function
 # println("\nData Segment of Core 2 : \n")
 # Display_Memory(sim,769,790)
-# println("\nData Segment of Core 1 : \n")
-# Display_Memory(sim,513,535)
+println("\nData Segment of Core 1 : \n")
+Display_Memory(sim,513,535)
 # println("\nCode Segment : \n")
 # Display_Memory(sim,1,20)
 

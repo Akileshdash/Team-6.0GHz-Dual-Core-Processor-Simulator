@@ -79,7 +79,7 @@ function Decode_and_execute(core::Core_Object,memory)
         # Chosen Instruction is B
         rs1 = parse(Int,Instruction_to_decode[13:17], base=2)+1
         rs2 = parse(Int,Instruction_to_decode[8:12], base=2)+1
-        offset = div(bin_string_to_signed_int(Instruction_to_decode[1]*Instruction_to_decode[end-7]*Instruction_to_decode[2:7]*Instruction_to_decode[end-11:end-8]*"0"),4)
+        offset = bin_string_to_signed_int(Instruction_to_decode[1]*Instruction_to_decode[end-7]*Instruction_to_decode[2:7]*Instruction_to_decode[end-11:end-8]*"0")
         Instruction_differentiator = Instruction_to_decode[18:20]
         operator = ""
         for (temp1, temp2) in B_format_instructions

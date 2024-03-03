@@ -50,7 +50,7 @@ jal x1, bubblesort
 #    la a0,str3
 #    ecall
 #    jalr x3
-  
+
 swap:
     #temp variable is x14
     sw x10,4(x13)

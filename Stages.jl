@@ -9,14 +9,19 @@ function run(processor::Processor)
     while processor.cores[1].pc<=length(processor.cores[1].program)
         processor.clock+=1
         instruction_Fetch(processor.cores[1],processor.memory)
+        processor.cores[1].registers[1]=0
         processor.clock+=1
         instructionDecode_RegisterFetch(processor.cores[1])
+        processor.cores[1].registers[1]=0
         processor.clock+=1
         execute(processor.cores[1])
+        processor.cores[1].registers[1]=0
         processor.clock+=1
         memory_access(processor.cores[1],processor.memory)
+        processor.cores[1].registers[1]=0
         processor.clock+=1
         writeBack(processor.cores[1])
+        processor.cores[1].registers[1]=0
     end
 end
 
@@ -44,8 +49,7 @@ function instructionDecode_RegisterFetch(core::Core_Object)
     #Instruction Decode
     opcode = Instruction_to_decode[26:32]
     func3 = Instruction_to_decode[18:20]
-    core.operator = operator_dict[opcode][func3]
-    println(core.operator)
+    core.operator = get_instruction(opcode, func3)
 end
 
 #==========================================================================================================
@@ -67,7 +71,8 @@ function memory_access(core::Core_Object,memory)
     rs1 = parse(Int,Instruction_to_decode[13:17], base=2) + 1
     opcode = Instruction_to_decode[26:32]
     func3 = Instruction_to_decode[18:20]
-    operator = operator_dict[opcode][func3]
+    # operator = operator_dict[opcode][func3]
+    operator = get_instruction(opcode, func3)
 
     core.mem_reg = address = core.execution_reg
     if operator == "LW"
@@ -81,7 +86,7 @@ function memory_access(core::Core_Object,memory)
         row,col = address_to_row_col(address)
         bin = int_to_32bit_bin(core.registers[rs1])
         in_memory_place_word(memory,row,col,bin)
-    elseif operator=="SB"
+    elseif operator == "SB"
         address = core.execution_reg
         row,col = address_to_row_col(address)
         memory[row,col] = core.registers[rs1]
@@ -95,7 +100,14 @@ end
 function writeBack(core::Core_Object)
     Instruction_to_decode = core.instruction_reg_after_Memory_Access
     rd = parse(Int,Instruction_to_decode[21:25], base=2) + 1
-    if any(value ->core.operator  in values(value), values(operator_dict_RI))
+    opcode = Instruction_to_decode[26:32]
+    func3 = Instruction_to_decode[18:20]
+    operator = get_instruction(opcode, func3)
+    
+
+    if any(value ->operator  in values(value), values(operator_dict_RI))
+        core.registers[rd] = core.mem_reg
+    elseif operator=="LA"||operator=="LW"||operator=="LB"||operator=="JAL"||operator=="JALR"
         core.registers[rd] = core.mem_reg
     end
 end
