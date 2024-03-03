@@ -9,19 +9,14 @@ function run(processor::Processor)
     while processor.cores[1].pc<=length(processor.cores[1].program)
         processor.clock+=1
         instruction_Fetch(processor.cores[1],processor.memory)
-        processor.cores[1].registers[1]=0
         processor.clock+=1
         instructionDecode_RegisterFetch(processor.cores[1])
-        processor.cores[1].registers[1]=0
         processor.clock+=1
         execute(processor.cores[1])
-        processor.cores[1].registers[1]=0
         processor.clock+=1
         memory_access(processor.cores[1],processor.memory)
-        processor.cores[1].registers[1]=0
         processor.clock+=1
         writeBack(processor.cores[1])
-        processor.cores[1].registers[1]=0
     end
 end
 
@@ -32,6 +27,7 @@ end
 function instruction_Fetch(core::Core_Object,memory)
     core.instruction_reg_after_IF = int_to_8bit_bin(memory[core.pc,4])*int_to_8bit_bin(memory[core.pc,3])*int_to_8bit_bin(memory[core.pc,2])*int_to_8bit_bin(memory[core.pc,1])
     core.pc+=1
+    core.registers[1]=0
 end
 
 #==========================================================================================================
@@ -50,6 +46,7 @@ function instructionDecode_RegisterFetch(core::Core_Object)
     opcode = Instruction_to_decode[26:32]
     func3 = Instruction_to_decode[18:20]
     core.operator = get_instruction(opcode, func3)
+    core.registers[1]=0
 end
 
 #==========================================================================================================
@@ -59,6 +56,7 @@ end
 function execute(core::Core_Object)
     core.instruction_reg_after_Execution = core.instruction_reg_after_ID_RF
     Execute_Operation(core)
+    core.registers[1]=0
 end
 
 #==========================================================================================================
@@ -91,6 +89,7 @@ function memory_access(core::Core_Object,memory)
         row,col = address_to_row_col(address)
         memory[row,col] = core.registers[rs1]
     end
+    core.registers[1]=0
 end
 
 #==========================================================================================================
@@ -110,4 +109,5 @@ function writeBack(core::Core_Object)
     elseif operator=="LA"||operator=="LW"||operator=="LB"||operator=="JAL"||operator=="JALR"
         core.registers[rd] = core.mem_reg
     end
+    core.registers[1]=0
 end

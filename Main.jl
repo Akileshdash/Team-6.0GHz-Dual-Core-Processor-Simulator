@@ -49,9 +49,8 @@ sim = processor_Init()
 #Check the file "Encoding_Instructions.jl" for this function
 encoding_all_instructions_to_memory(sim)
 
-#Now we are running the processor ( Check the file "Processor_Core_Init.jl" to run the processor parallely or sequentially)
+#Now we are running the processor ( Check the file "Stages.jl" to run the processor parallely or sequentially)
 run(sim)
-
 
 
 #Display a block of the memory of processor (syntax explained at the top of this file)
