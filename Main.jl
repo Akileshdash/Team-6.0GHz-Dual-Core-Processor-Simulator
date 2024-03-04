@@ -39,7 +39,8 @@ include("parser.jl")
 include("Encoding_Instructions.jl")
 include("Stages.jl")
 
-file_path_1 = "./Assembly_Codes/Bubble_Sort.asm"
+# file_path_1 = "./Assembly_Codes/Bubble_Sort.asm"
+file_path_1 = "./Assembly_Codes/test.asm"
 file_path_2 = "./Assembly_Codes/Selection_Sort.asm"
 
 #Initialize a processor object ( Check "Processor_Core_Init.jl" File)
@@ -57,8 +58,8 @@ run(sim)
 #Check the file "Helper_Functions" for this function
 # println("\nData Segment of Core 2 : \n")
 # Display_Memory(sim,769,790)
-println("\nData Segment of Core 1 : \n")
-Display_Memory(sim,513,535)
+# println("\nData Segment of Core 1 : \n")
+# Display_Memory(sim,513,535)
 # println("\nCode Segment : \n")
 # Display_Memory(sim,1,20)
 

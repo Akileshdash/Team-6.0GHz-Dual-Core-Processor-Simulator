@@ -30,6 +30,9 @@ mutable struct Core_Object
     mem_reg::Int
     instruction_reg_after_Memory_Access::String
 
+    #For write Back
+    writeBack_of_last_instruction::Bool
+
 end
 
 mutable struct Processor
@@ -45,25 +48,27 @@ function core_Init(id)
 
     #Special Purpose Registers
     #For Instruction Fetch
-    instruction_reg_after_IF = ""
+    instruction_reg_after_IF = "uninitialized"
 
     #For instruction Decode
-    rs2 = 0
-    rs1 = 0
-    rd = 0
+    rs2 = -1
+    rs1 = -1
+    rd = -1
     immediate_value_or_offset = 0
     operator = ""
-    instruction_reg_after_ID_RF = ""
+    instruction_reg_after_ID_RF = "uninitialized"
 
     #For Executions
     execution_reg = 0
-    instruction_reg_after_Execution = ""
+    instruction_reg_after_Execution = "uninitialized"
 
     #For Memory Access
     mem_reg = 0
-    instruction_reg_after_Memory_Access = ""
+    instruction_reg_after_Memory_Access = "uninitialized"
 
-    return Core_Object(id,registers, pc, program,instruction_reg_after_IF,rs2,rs1,rd,immediate_value_or_offset,operator,instruction_reg_after_ID_RF,execution_reg,instruction_reg_after_Execution,mem_reg,instruction_reg_after_Memory_Access)
+    #Write Back
+    writeBack_of_last_instruction = false
+    return Core_Object(id,registers, pc, program,instruction_reg_after_IF,rs2,rs1,rd,immediate_value_or_offset,operator,instruction_reg_after_ID_RF,execution_reg,instruction_reg_after_Execution,mem_reg,instruction_reg_after_Memory_Access,writeBack_of_last_instruction)
 end
 
 function processor_Init()
