@@ -128,5 +128,8 @@ function  Execute_Operation(core::Core_Object)
         core.execution_reg = core.pc      #Because after IF stage we are incrementing the pc
         core.pc = core.registers[core.rs1] + core.immediate_value_or_offset
     end
+    core.rs1-=1
+    core.rs2-=1
+    core.rd-=1
  end
  
