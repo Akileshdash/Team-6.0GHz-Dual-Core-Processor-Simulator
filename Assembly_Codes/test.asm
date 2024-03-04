@@ -1,4 +1,5 @@
 .text
-addi x1,x0,100
-addi x2,x0,1000
-addi x3,x0,5000
+add x1,x2,x3
+add x4,x5,x6
+add x3,x1,x2
+add x5,x6,x7

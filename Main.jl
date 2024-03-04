@@ -37,7 +37,7 @@
 include("parser.jl")
 # include("Decoding_Instructions.jl")
 include("Encoding_Instructions.jl")
-include("Stages.jl")
+include("Stages_Akilesh.jl")
 
 # file_path_1 = "./Assembly_Codes/Bubble_Sort.asm"
 file_path_1 = "./Assembly_Codes/test.asm"
@@ -49,7 +49,7 @@ sim = processor_Init()
 #After Creation of Processor, we are encoding the asm instructions in both files into the memory of processor
 #Check the file "Encoding_Instructions.jl" for this function
 encoding_all_instructions_to_memory(sim)
-
+println("encoding done")
 #Now we are running the processor ( Check the file "Stages.jl" to run the processor parallely or sequentially)
 run(sim)
 
@@ -64,7 +64,8 @@ run(sim)
 # Display_Memory(sim,1,20)
 
 println(sim.cores[1].registers)
-println(sim.clock)
+println("Number of clocks = ",sim.clock)
+println("Number of stalls = ",sim.cores[1].stall_count)
 #Printing the total number of clocks the processor has taken to execute both the cores instructions 
 # println("\nNumber of clocks taken for comuting both instructions ( parallely ) = ",sim.clock)
 
