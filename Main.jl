@@ -39,8 +39,7 @@ include("parser.jl")
 include("Encoding_Instructions.jl")
 include("Stages_Akilesh.jl")
 
-# file_path_1 = "./Assembly_Codes/Bubble_Sort.asm"
-file_path_1 = "./Assembly_Codes/test.asm"
+file_path_1 = "hi.asm"
 file_path_2 = "./Assembly_Codes/Selection_Sort.asm"
 
 #Initialize a processor object ( Check "Processor_Core_Init.jl" File)

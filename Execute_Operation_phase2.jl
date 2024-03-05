@@ -134,6 +134,6 @@ function  Execute_Operation(core::Core_Object)
     end
     core.rs1-=1
     core.rs2-=1
-    core.rd-=1   
+    core.rd-=1
  end
  
