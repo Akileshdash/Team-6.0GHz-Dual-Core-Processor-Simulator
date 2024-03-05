@@ -8,7 +8,7 @@ include("Execute_Operation_phase2.jl")
 function run(processor::Processor)
     while !processor.cores[1].writeBack_of_last_instruction
         processor.clock+=1
-        if processor.cores[1].stall_present
+        if processor.cores[1].stall_in_present_clock
             println("Stall Present at clock : ",processor.clock)
             processor.cores[1].stall_count+=1
         end 
@@ -17,6 +17,7 @@ function run(processor::Processor)
         execute(processor.cores[1],processor)
         instructionDecode_RegisterFetch(processor.cores[1],processor)
         instruction_Fetch(processor.cores[1],processor)
+        # sleep(0.75)
     end
 end
 
@@ -90,7 +91,8 @@ end
 ===========================================================================================================#
 
 function execute(core::Core_Object,processor::Processor)
-    if core.stall_present||core.stall_at_execution
+    # println("at execute clock :  ",processor.clock," core.stall_in_present_clock= ",core.stall_in_present_clock)
+    if core.stall_in_present_clock||core.stall_at_execution
         core.instruction_reg_after_Execution = "uninitialized"
         return
     end
@@ -99,6 +101,7 @@ function execute(core::Core_Object,processor::Processor)
         println("Instruction Executed at clock : ",processor.clock)
         Execute_Operation(core) 
         core.writeBack_of_last_instruction = false
+        core.writeBack_of_second_last_instruction = false
     end
     core.registers[1]=0
 end
@@ -108,7 +111,7 @@ end
 ===========================================================================================================#
 
 function instructionDecode_RegisterFetch(core::Core_Object,processor::Processor)
-    if core.stall_present
+    if core.stall_in_present_clock
         return
     end
     core.instruction_reg_after_ID_RF = Instruction_to_decode = core.instruction_reg_after_IF
@@ -125,13 +128,70 @@ function instructionDecode_RegisterFetch(core::Core_Object,processor::Processor)
         opcode = Instruction_to_decode[26:32]
         func3 = Instruction_to_decode[18:20]
         core.operator = get_instruction(opcode, func3)
-        #Checking Data Dependency on one instruction before
-        if core.rs2==core.rd||core.rs1==core.rd
-            core.stall_in_next_clock = true
-        #Checking Data Dependency on one more instruction before
-        elseif core.rs1==core.rd_second_before || core.rs1==core.rd_second_before
-            core.stall_at_execution = true
-            core.stall_in_next_clock = true
+        if opcode=="0010011"    # I Format Instructions
+            if core.rs1==core.rd
+                core.stall_in_next_clock = true
+                println("It is dependent 0.1")
+            elseif core.rs1 == core.rd_second_before
+                if !core.writeBack_of_second_last_instruction
+                    core.stall_at_execution = true
+                    core.stall_in_next_clock = true
+                    println("It is dependent 0.2")
+                end
+            end
+
+        elseif opcode!="1100011"        #Checking It is not a branch Statement
+            #Checking Data Dependency on one instruction before
+            if core.rs2==core.rd||core.rs1==core.rd
+                core.stall_in_next_clock = true
+                println("It is dependent 1")
+            #Checking Data Dependency on one more instruction before
+            elseif core.rs1==core.rd_second_before || core.rs2==core.rd_second_before
+                if !core.writeBack_of_second_last_instruction
+                    core.stall_at_execution = true
+                    core.stall_in_next_clock = true
+                    println("It is dependent 2")
+                end
+            end
+
+        elseif opcode=="1100011"    #Chechking It is a branch Instruction
+
+            #In Branch instructions Data is Dependent on last instruction 
+
+            if core.rs1==core.rd||rd==core.rd
+                core.stall_in_next_clock = true
+                println("It is dependent 3")
+                core.writeBack_of_last_instruction = false
+                core.stall_at_instruction_fetch = true
+                core.rd_second_before = core.rd
+                core.rd=rd
+                return
+            end
+
+            #Checking Data Dependency on second last instruction 
+
+            if core.rs1==core.rd_second_before || rd==core.rd_second_before
+                if !core.writeBack_of_second_last_instruction
+                    core.stall_at_instruction_fetch = true
+                    core.stall_at_execution = true
+                    core.stall_in_next_clock = true
+                    println("It is dependent 4")
+                end
+                core.stall_at_instruction_fetch = true
+                return
+            end
+            offset = div(bin_string_to_signed_int(Instruction_to_decode[1:12]*"0"),4)
+            if core.operator == "BEQ"
+                if core.registers[core.rs1+1]==core.registers[rd+1]
+                    if offset!=1        #Branch to be chosen is not the next one
+                        core.stall_at_instruction_fetch = true
+                        if core.stall_at_execution && core.stall_in_next_clock
+                            core.stall_at_execution = false
+                            core.stall_in_next_clock = false
+                        end
+                    end
+                end
+            end
         end
         core.writeBack_of_last_instruction = false
         core.rd_second_before = core.rd
@@ -147,17 +207,30 @@ end
 
 function instruction_Fetch(core::Core_Object,processor::Processor)
     memory = processor.memory
+    if core.stall_at_instruction_fetch 
+        core.instruction_reg_after_IF = "uninitialized"
+        core.stall_at_instruction_fetch = false
+        core.stall_count+=1
+        println("Stall due to branch statment at clock : ",processor.clock," core.stall_in_next_clock = ",core.stall_in_next_clock)
+        if core.stall_in_next_clock
+            core.stall_in_present_clock = true
+            core.stall_in_next_clock = false
+        end
+        return
+    end
     if core.stall_at_execution
         if core.writeBack_of_second_last_instruction
             core.stall_at_execution = false
-            core.stall_present = false
+            core.stall_in_present_clock = false
             return 
         end
     end
-    if core.stall_present
+    if core.stall_in_present_clock
         if core.writeBack_of_last_instruction
-            core.stall_present = false
+            core.stall_in_present_clock = false
             core.writeBack_of_last_instruction = false
+        else
+            core.stall_in_present_clock = true
         end
         return
     end
@@ -171,7 +244,7 @@ function instruction_Fetch(core::Core_Object,processor::Processor)
     end
     core.registers[1]=0
     if core.stall_in_next_clock
-        core.stall_present = true
+        core.stall_in_present_clock = true
         core.stall_in_next_clock = false
     end
 end
