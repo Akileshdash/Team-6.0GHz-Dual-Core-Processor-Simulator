@@ -89,37 +89,42 @@ function  Execute_Operation(core::Core_Object)
 
     elseif core.operator=="BEQ"
         offset = div(bin_string_to_signed_int(Instruction_to_decode[1:12]*"0"),4)
-        if core.registers[core.rs1] == core.registers[core.rd]
+        rd = parse(Int,Instruction_to_decode[21:25], base=2)+1
+        #println(core.rs1," ",rd)
+        if core.registers[core.rs1] == core.registers[rd]
             if offset!=1
                 core.pc = core.pc + offset - 1      #Because after IF stage we are incrementing the pc
-                println("Instruction fetched from pc : ",core.pc)
+                #println("Instruction fetched from pc : ",core.pc)
                 core.rd = -1
             end
         end
     elseif core.operator=="BNE"
         offset = div(bin_string_to_signed_int(Instruction_to_decode[1:12]*"0"),4)
-        if core.registers[core.rs1] != core.registers[core.rd]
+        rd = parse(Int,Instruction_to_decode[21:25], base=2)+1
+        if core.registers[core.rs1] != core.registers[rd]
             if offset!=1
                 core.pc = core.pc + offset - 1        #Because after IF stage we are incrementing the pc
-                println("Instruction fetched from pc : ",core.pc)
+                #println("Instruction fetched from pc : ",core.pc)
                 core.rd = -1
             end
         end
     elseif core.operator=="BLT"
         offset = div(bin_string_to_signed_int(Instruction_to_decode[1:12]*"0"),4)
-        if core.registers[core.rs1] < core.registers[core.rd]
+        rd = parse(Int,Instruction_to_decode[21:25], base=2)+1
+        if core.registers[core.rs1] < core.registers[rd]
             if offset!=1
                 core.pc = core.pc + offset - 1      #Because after IF stage we are incrementing the pc
-                println("Instruction fetched from pc : ",core.pc)
+                #println("Instruction fetched from pc : ",core.pc)
                 core.rd = - 1
             end
         end
     elseif core.operator=="BGE"
         offset = div(bin_string_to_signed_int(Instruction_to_decode[1:12]*"0"),4)
-        if core.registers[core.rs1] >= core.registers[core.rd]
+        rd = parse(Int,Instruction_to_decode[21:25], base=2)+1
+        if core.registers[core.rs1] >= core.registers[rd]
             if offset!=1
                 core.pc = core.pc + offset - 1      #Because after IF stage we are incrementing the pc
-                println("Instruction fetched from pc : ",core.pc)
+                #println("Instruction fetched from pc : ",core.pc)
                 core.rd = -1
             end
         end
@@ -134,6 +139,7 @@ function  Execute_Operation(core::Core_Object)
         core.execution_reg = core.pc      #Because after IF stage we are incrementing the pc
         offset = bin_string_to_signed_int(Instruction_to_decode[1:20])
         core.pc = core.pc + offset  - 1
+        #println("Instruction Fetched = ",core.pc)
 
         #======================================================================
                             Executing JALR Format Operations          

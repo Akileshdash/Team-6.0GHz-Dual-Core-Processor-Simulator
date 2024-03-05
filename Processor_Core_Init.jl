@@ -10,11 +10,13 @@ mutable struct Core_Object
     program::Array{String, 1}
     
     #Special Purpose Registers
+    instruction_count::Int
     stall_count::Int
     stall_in_present_clock::Bool
     stall_at_instruction_fetch::Bool
     stall_at_execution::Bool
     stall_in_next_clock::Bool
+    stall_due_to_jump::Bool
     # Bus_in_use
 
     #For Instruction Fetch
@@ -59,11 +61,13 @@ function core_Init(id)
     program = []
 
     #Special Purpose Registers
+    instruction_count = 0
     stall_count = 0
     stall_in_present_clock = false
     stall_at_instruction_fetch = false
     stall_at_execution = false
     stall_in_next_clock = false
+    stall_due_to_jump = false
     #For Instruction Fetch
     instruction_reg_after_IF = "uninitialized"
 
@@ -92,7 +96,7 @@ function core_Init(id)
 
     #Branch Prediction
     actual_branch_to_be_taken = 0
-    return Core_Object(id,registers, pc, program,stall_count,stall_in_present_clock,stall_at_instruction_fetch,stall_at_execution,stall_in_next_clock,instruction_reg_after_IF,rd_second_before,rs2,rs1,rd,immediate_value_or_offset,operator,instruction_reg_after_ID_RF,temp_reg,execution_reg,instruction_reg_after_Execution,mem_reg,instruction_reg_after_Memory_Access,instruction_reg_after_Write_Back,writeBack_of_last_instruction,writeBack_of_second_last_instruction,actual_branch_to_be_taken)
+    return Core_Object(id,registers, pc, program,instruction_count,stall_count,stall_in_present_clock,stall_at_instruction_fetch,stall_at_execution,stall_in_next_clock,stall_due_to_jump,instruction_reg_after_IF,rd_second_before,rs2,rs1,rd,immediate_value_or_offset,operator,instruction_reg_after_ID_RF,temp_reg,execution_reg,instruction_reg_after_Execution,mem_reg,instruction_reg_after_Memory_Access,instruction_reg_after_Write_Back,writeBack_of_last_instruction,writeBack_of_second_last_instruction,actual_branch_to_be_taken)
 end
 
 function processor_Init()

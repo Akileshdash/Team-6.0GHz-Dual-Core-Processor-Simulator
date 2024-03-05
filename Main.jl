@@ -39,7 +39,7 @@ include("parser.jl")
 include("Encoding_Instructions.jl")
 include("Stages_Akilesh.jl")
 
-file_path_1 = "./Assembly_Codes/test.asm"
+file_path_1 = "./Assembly_Codes/Bubble_Sort.asm"
 file_path_2 = "./Assembly_Codes/Selection_Sort.asm"
 
 #Initialize a processor object ( Check "Processor_Core_Init.jl" File)
@@ -50,6 +50,9 @@ sim = processor_Init()
 encoding_all_instructions_to_memory(sim)
 println("encoding done")
 #Now we are running the processor ( Check the file "Stages.jl" to run the processor parallely or sequentially)
+
+println("\nData Segment of Core 1 : \n")
+Display_Memory(sim,513,535)
 run(sim)
 
 
@@ -57,14 +60,16 @@ run(sim)
 #Check the file "Helper_Functions" for this function
 # println("\nData Segment of Core 2 : \n")
 # Display_Memory(sim,769,790)
-# println("\nData Segment of Core 1 : \n")
-# Display_Memory(sim,513,535)
+println("\nData Segment of Core 1 : \n")
+Display_Memory(sim,513,535)
 # println("\nCode Segment : \n")
 # Display_Memory(sim,1,20)
 
 println(sim.cores[1].registers)
 println("Number of clocks = ",sim.clock)
+println("Number of instructions executed in core 1 = ",sim.cores[1].instruction_count)
 println("Number of stalls = ",sim.cores[1].stall_count)
+println("IPC = ",sim.cores[1].instruction_count/sim.clock )
 #Printing the total number of clocks the processor has taken to execute both the cores instructions 
 # println("\nNumber of clocks taken for comuting both instructions ( parallely ) = ",sim.clock)
 

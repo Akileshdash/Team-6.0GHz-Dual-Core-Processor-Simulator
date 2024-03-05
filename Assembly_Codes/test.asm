@@ -1,5 +1,13 @@
 .text
-li x5,51
-li x6,7
-addi x6,x6,1
-li x20,20
+li x1,3
+li x2,10
+jal x10,loop
+loop:
+addi x3,x3,1
+beq x3,x2,exit
+jalr x10
+exit:
+li x31,100
+
+
+
