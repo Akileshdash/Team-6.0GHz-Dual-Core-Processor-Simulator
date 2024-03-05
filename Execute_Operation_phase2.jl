@@ -99,17 +99,29 @@ function  Execute_Operation(core::Core_Object)
     elseif core.operator=="BNE"
         offset = div(bin_string_to_signed_int(Instruction_to_decode[1:12]*"0"),4)
         if core.registers[core.rs1] != core.registers[core.rd]
-            core.pc = core.pc + offset - 1        #Because after IF stage we are incrementing the pc
+            if offset!=1
+                core.pc = core.pc + offset - 1        #Because after IF stage we are incrementing the pc
+                println("Instruction fetched from pc : ",core.pc)
+                core.rd = -1
+            end
         end
     elseif core.operator=="BLT"
         offset = div(bin_string_to_signed_int(Instruction_to_decode[1:12]*"0"),4)
         if core.registers[core.rs1] < core.registers[core.rd]
-            core.pc = core.pc + offset - 1      #Because after IF stage we are incrementing the pc
+            if offset!=1
+                core.pc = core.pc + offset - 1      #Because after IF stage we are incrementing the pc
+                println("Instruction fetched from pc : ",core.pc)
+                core.rd = - 1
+            end
         end
     elseif core.operator=="BGE"
         offset = div(bin_string_to_signed_int(Instruction_to_decode[1:12]*"0"),4)
         if core.registers[core.rs1] >= core.registers[core.rd]
-            core.pc = core.pc + offset - 1      #Because after IF stage we are incrementing the pc
+            if offset!=1
+                core.pc = core.pc + offset - 1      #Because after IF stage we are incrementing the pc
+                println("Instruction fetched from pc : ",core.pc)
+                core.rd = -1
+            end
         end
 
 

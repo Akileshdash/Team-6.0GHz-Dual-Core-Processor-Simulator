@@ -77,13 +77,16 @@ function memory_access(core::Core_Object,processor::Processor)
             memory[row,col] = core.registers[rs1]
         end
         core.writeBack_of_last_instruction = false
+        core.registers[1]=0
+        if core.writeBack_of_second_last_instruction
+            return
+        end
         if core.instruction_reg_after_Write_Back!="uninitialized"
             core.writeBack_of_second_last_instruction = true
         else
             core.writeBack_of_second_last_instruction = false
         end
     end
-    core.registers[1]=0
 end
 
 #==========================================================================================================
@@ -91,7 +94,6 @@ end
 ===========================================================================================================#
 
 function execute(core::Core_Object,processor::Processor)
-    # println("at execute clock :  ",processor.clock," core.stall_in_present_clock= ",core.stall_in_present_clock)
     if core.stall_in_present_clock||core.stall_at_execution
         core.instruction_reg_after_Execution = "uninitialized"
         return
@@ -101,7 +103,6 @@ function execute(core::Core_Object,processor::Processor)
         println("Instruction Executed at clock : ",processor.clock)
         Execute_Operation(core) 
         core.writeBack_of_last_instruction = false
-        core.writeBack_of_second_last_instruction = false
     end
     core.registers[1]=0
 end
@@ -191,6 +192,36 @@ function instructionDecode_RegisterFetch(core::Core_Object,processor::Processor)
                         end
                     end
                 end
+            elseif core.operator == "BNE"
+                if core.registers[core.rs1+1]!=core.registers[rd+1]
+                    if offset!=1        #Branch to be chosen is not the next one
+                        core.stall_at_instruction_fetch = true
+                        if core.stall_at_execution && core.stall_in_next_clock
+                            core.stall_at_execution = false
+                            core.stall_in_next_clock = false
+                        end
+                    end
+                end
+            elseif core.operator == "BLT"
+                if core.registers[core.rs1+1]<core.registers[rd+1]
+                    if offset!=1        #Branch to be chosen is not the next one
+                        core.stall_at_instruction_fetch = true
+                        if core.stall_at_execution && core.stall_in_next_clock
+                            core.stall_at_execution = false
+                            core.stall_in_next_clock = false
+                        end
+                    end
+                end
+            elseif core.operator == "BGE"
+                if core.registers[core.rs1+1]>=core.registers[rd+1]
+                    if offset!=1        #Branch to be chosen is not the next one
+                        core.stall_at_instruction_fetch = true
+                        if core.stall_at_execution && core.stall_in_next_clock
+                            core.stall_at_execution = false
+                            core.stall_in_next_clock = false
+                        end
+                    end
+                end
             end
         end
         core.writeBack_of_last_instruction = false
@@ -211,7 +242,7 @@ function instruction_Fetch(core::Core_Object,processor::Processor)
         core.instruction_reg_after_IF = "uninitialized"
         core.stall_at_instruction_fetch = false
         core.stall_count+=1
-        println("Stall due to branch statment at clock : ",processor.clock," core.stall_in_next_clock = ",core.stall_in_next_clock)
+        println("Stall due to branch statment at clock : ",processor.clock)
         if core.stall_in_next_clock
             core.stall_in_present_clock = true
             core.stall_in_next_clock = false
@@ -229,6 +260,7 @@ function instruction_Fetch(core::Core_Object,processor::Processor)
         if core.writeBack_of_last_instruction
             core.stall_in_present_clock = false
             core.writeBack_of_last_instruction = false
+            core.writeBack_of_second_last_instruction = true
         else
             core.stall_in_present_clock = true
         end
