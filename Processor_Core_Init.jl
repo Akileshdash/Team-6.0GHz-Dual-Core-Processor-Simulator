@@ -8,7 +8,7 @@ mutable struct Core_Object
     registers::Array{Int, 1}
     pc::Int
     program::Array{String, 1}
-    
+
     #Special Purpose Registers
     instruction_count::Int
     stall_count::Int
@@ -17,7 +17,21 @@ mutable struct Core_Object
     stall_at_execution::Bool
     stall_in_next_clock::Bool
     stall_due_to_jump::Bool
-    # Bus_in_use
+    stall_due_to_load::Bool
+    stall_due_to_df::Bool
+    data_forwarding_on::Bool
+    data_forwarding_for_Store_rs::Bool
+    data_forwarding_reg_i::Int
+    data_forwarding_reg_rs1::Int
+    data_forwarding_reg_rs2::Int
+    data_forwarding_reg_rd::Int
+    data_forwarding_for_branch::Bool
+    regi_dependent_on_previous_instruction::Bool
+    rs1_dependent_on_previous_instruction::Bool
+    rs2_dependent_on_previous_instruction::Bool
+    rd_dependent_on_previous_instruction::Bool
+    rs1_dependent_on_second_previous_instruction::Bool
+    rs2_dependent_on_second_previous_instruction::Bool
 
     #For Instruction Fetch
     instruction_reg_after_IF::String
@@ -28,7 +42,9 @@ mutable struct Core_Object
     rs1::Int
     rd::Int
     immediate_value_or_offset::Int
-    operator::String
+    present_operator::String
+    previous_operator::String
+    second_previous_operator::String
     instruction_reg_after_ID_RF::String
     temp_reg::String
 
@@ -37,6 +53,7 @@ mutable struct Core_Object
     instruction_reg_after_Execution::String
 
     #For Memory Access
+    previous_mem_reg::Int
     mem_reg::Int
     instruction_reg_after_Memory_Access::String
 
@@ -68,6 +85,22 @@ function core_Init(id)
     stall_at_execution = false
     stall_in_next_clock = false
     stall_due_to_jump = false
+    stall_due_to_load = false
+    stall_due_to_df = false
+    data_forwarding_on = false
+    data_forwarding_for_Store_rs = false
+    data_forwarding_reg_i = 0
+    data_forwarding_reg_rs1 = 0
+    data_forwarding_reg_rs2 = 0
+    data_forwarding_reg_rd = 0
+    data_forwarding_for_branch = false
+    regi_dependent_on_previous_instruction = false
+    rs1_dependent_on_previous_instruction = false
+    rs2_dependent_on_previous_instruction = false
+    rd_dependent_on_previous_instruction = false
+    rs1_dependent_on_second_previous_instruction = false
+    rs2_dependent_on_second_previous_instruction = false
+
     #For Instruction Fetch
     instruction_reg_after_IF = "uninitialized"
 
@@ -77,7 +110,9 @@ function core_Init(id)
     rs1 = -1
     rd = -1
     immediate_value_or_offset = 0
-    operator = ""
+    present_operator = ""
+    previous_operator = ""
+    second_previous_operator = ""
     instruction_reg_after_ID_RF = "uninitialized"
     temp_reg = "uninitialized"
 
@@ -86,6 +121,7 @@ function core_Init(id)
     instruction_reg_after_Execution = "uninitialized"
 
     #For Memory Access
+    previous_mem_reg = 0
     mem_reg = 0
     instruction_reg_after_Memory_Access = "uninitialized"
 
@@ -96,7 +132,7 @@ function core_Init(id)
 
     #Branch Prediction
     actual_branch_to_be_taken = 0
-    return Core_Object(id,registers, pc, program,instruction_count,stall_count,stall_in_present_clock,stall_at_instruction_fetch,stall_at_execution,stall_in_next_clock,stall_due_to_jump,instruction_reg_after_IF,rd_second_before,rs2,rs1,rd,immediate_value_or_offset,operator,instruction_reg_after_ID_RF,temp_reg,execution_reg,instruction_reg_after_Execution,mem_reg,instruction_reg_after_Memory_Access,instruction_reg_after_Write_Back,writeBack_of_last_instruction,writeBack_of_second_last_instruction,actual_branch_to_be_taken)
+    return Core_Object(id,registers, pc, program,instruction_count,stall_count,stall_in_present_clock,stall_at_instruction_fetch,stall_at_execution,stall_in_next_clock,stall_due_to_jump,stall_due_to_load,stall_due_to_df,data_forwarding_on,data_forwarding_for_Store_rs,data_forwarding_reg_i,data_forwarding_reg_rs1,data_forwarding_reg_rs2,data_forwarding_reg_rd,data_forwarding_for_branch,regi_dependent_on_previous_instruction,rs1_dependent_on_previous_instruction,rs2_dependent_on_previous_instruction,rd_dependent_on_previous_instruction,rs1_dependent_on_second_previous_instruction,rs2_dependent_on_second_previous_instruction,instruction_reg_after_IF,rd_second_before,rs2,rs1,rd,immediate_value_or_offset,present_operator,previous_operator,second_previous_operator,instruction_reg_after_ID_RF,temp_reg,execution_reg,instruction_reg_after_Execution,previous_mem_reg,mem_reg,instruction_reg_after_Memory_Access,instruction_reg_after_Write_Back,writeBack_of_last_instruction,writeBack_of_second_last_instruction,actual_branch_to_be_taken)
 end
 
 function processor_Init()

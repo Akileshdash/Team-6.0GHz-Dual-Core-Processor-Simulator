@@ -5,7 +5,7 @@ include("Execute_Operation_phase2.jl")
 ===========================================================================================================#
 
 
-function run(processor::Processor)
+function run_without_DF(processor::Processor)
     while !processor.cores[1].writeBack_of_last_instruction
         processor.clock+=1
         if processor.cores[1].stall_in_present_clock
@@ -27,7 +27,7 @@ end
 function writeBack(core::Core_Object,processor::Processor)
     core.instruction_reg_after_Write_Back = Instruction_to_decode = core.instruction_reg_after_Memory_Access
     if Instruction_to_decode!="uninitialized"
-        #println("Instruction Write Back at clock : ",processor.clock)
+        # println("Instruction Write Back at clock : ",processor.clock)
         core.instruction_count+=1
         rd = parse(Int,Instruction_to_decode[21:25], base=2) + 1
         opcode = Instruction_to_decode[26:32]
@@ -52,7 +52,7 @@ function memory_access(core::Core_Object,processor::Processor)
     memory = processor.memory
     core.instruction_reg_after_Memory_Access = Instruction_to_decode = core.instruction_reg_after_Execution
     if core.instruction_reg_after_Memory_Access!="uninitialized"
-        #println("Instruction Memory Access at clock : ",processor.clock)
+        # println("Instruction Memory Access at clock : ",processor.clock)
         rs1 = parse(Int,Instruction_to_decode[13:17], base=2) + 1
         opcode = Instruction_to_decode[26:32]
         func3 = Instruction_to_decode[18:20]
@@ -99,7 +99,7 @@ function execute(core::Core_Object,processor::Processor)
     end
     core.instruction_reg_after_Execution = core.instruction_reg_after_ID_RF
     if core.instruction_reg_after_Execution!="uninitialized"
-        #println("Instruction Executed at clock : ",processor.clock)
+        # println("Instruction Executed at clock : ",processor.clock)
         Execute_Operation(core) 
         core.writeBack_of_last_instruction = false
     end
@@ -116,18 +116,17 @@ function instructionDecode_RegisterFetch(core::Core_Object,processor::Processor)
     end
     core.instruction_reg_after_ID_RF = Instruction_to_decode = core.instruction_reg_after_IF
     if core.instruction_reg_after_ID_RF!="uninitialized"
-        #println("Instruction Decoded at clock : ",processor.clock)
+        # println("Instruction Decoded at clock : ",processor.clock)
         # Register Fetch
         core.rs2 = parse(Int,Instruction_to_decode[8:12], base=2)
         core.rs1 = parse(Int,Instruction_to_decode[13:17], base=2)
         rd = parse(Int,Instruction_to_decode[21:25], base=2)
         
         core.immediate_value_or_offset = bin_string_to_signed_int(Instruction_to_decode[1:12])
-
         #Instruction Decode
         opcode = Instruction_to_decode[26:32]
         func3 = Instruction_to_decode[18:20]
-        core.operator = get_instruction(opcode, func3)
+        core.present_operator = get_instruction(opcode, func3)
         if opcode=="0010011"    # I Format Instructions
             if core.rs1==core.rd
                 core.stall_in_next_clock = true
@@ -161,7 +160,7 @@ function instructionDecode_RegisterFetch(core::Core_Object,processor::Processor)
                 end
             end
 
-        elseif opcode=="1100011"    #Chechking It is a branch Instruction
+        elseif opcode=="1100011"    #Checking It is a branch Instruction
 
             #In Branch instructions Data is Dependent on last instruction 
 
@@ -188,7 +187,7 @@ function instructionDecode_RegisterFetch(core::Core_Object,processor::Processor)
                 return
             end
             offset = div(bin_string_to_signed_int(Instruction_to_decode[1:12]*"0"),4)
-            if core.operator == "BEQ"
+            if core.present_operator == "BEQ"
                 if core.registers[core.rs1+1]==core.registers[rd+1]
                     if offset!=1        #Branch to be chosen is not the next one
                         core.stall_at_instruction_fetch = true
@@ -198,7 +197,7 @@ function instructionDecode_RegisterFetch(core::Core_Object,processor::Processor)
                         end
                     end
                 end
-            elseif core.operator == "BNE"
+            elseif core.present_operator == "BNE"
                 if core.registers[core.rs1+1]!=core.registers[rd+1]
                     if offset!=1        #Branch to be chosen is not the next one
                         core.stall_at_instruction_fetch = true
@@ -208,7 +207,7 @@ function instructionDecode_RegisterFetch(core::Core_Object,processor::Processor)
                         end
                     end
                 end
-            elseif core.operator == "BLT"
+            elseif core.present_operator == "BLT"
                 if core.registers[core.rs1+1]<core.registers[rd+1]
                     if offset!=1        #Branch to be chosen is not the next one
                         core.stall_at_instruction_fetch = true
@@ -218,7 +217,7 @@ function instructionDecode_RegisterFetch(core::Core_Object,processor::Processor)
                         end
                     end
                 end
-            elseif core.operator == "BGE"
+            elseif core.present_operator == "BGE"
                 if core.registers[core.rs1+1]>=core.registers[rd+1]
                     if offset!=1        #Branch to be chosen is not the next one
                         core.stall_at_instruction_fetch = true
@@ -280,7 +279,7 @@ function instruction_Fetch(core::Core_Object,processor::Processor)
         return
     end
     if core.pc<=length(core.program)
-        #println("Instruction fetch at clock : ",processor.clock)
+        # println("Instruction fetch at clock : ",processor.clock)
         core.instruction_reg_after_IF = int_to_8bit_bin(memory[core.pc,4])*int_to_8bit_bin(memory[core.pc,3])*int_to_8bit_bin(memory[core.pc,2])*int_to_8bit_bin(memory[core.pc,1])
         core.writeBack_of_last_instruction = false
         core.pc+=1

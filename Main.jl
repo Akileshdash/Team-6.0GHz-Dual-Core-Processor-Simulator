@@ -37,10 +37,11 @@
 include("parser.jl")
 # include("Decoding_Instructions.jl")
 include("Encoding_Instructions.jl")
-include("Stages_Akilesh.jl")
+# include("Stages_without_DF.jl")
+include("Stages_with_DF.jl")
 
-file_path_1 = "./Assembly_Codes/Bubble_Sort.asm"
-file_path_2 = "./Assembly_Codes/Selection_Sort.asm"
+file_path_1 = "./Assembly_Codes/Bubble_Sort.s"
+file_path_2 = "./Assembly_Codes/Selection_Sort.s"
 
 #Initialize a processor object ( Check "Processor_Core_Init.jl" File)
 sim = processor_Init()  
@@ -51,9 +52,11 @@ encoding_all_instructions_to_memory(sim)
 println("encoding done")
 #Now we are running the processor ( Check the file "Stages.jl" to run the processor parallely or sequentially)
 
-println("\nData Segment of Core 1 : \n")
-Display_Memory(sim,513,535)
-run(sim)
+# println("\nData Segment of Core 1 : \n")
+# Display_Memory(sim,513,535)
+
+# run_without_DF(sim)
+run_with_DF(sim)
 
 
 #Display a block of the memory of processor (syntax explained at the top of this file)
@@ -62,8 +65,8 @@ run(sim)
 # Display_Memory(sim,769,790)
 println("\nData Segment of Core 1 : \n")
 Display_Memory(sim,513,535)
+# Display_Memory(sim,513,520)
 # println("\nCode Segment : \n")
-# Display_Memory(sim,1,20)
 
 println(sim.cores[1].registers)
 println("Number of clocks = ",sim.clock)
