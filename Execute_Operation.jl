@@ -173,7 +173,7 @@ function  Execute_Operation(core::Core_Object)
             core.execution_reg = core.data_forwarding_reg_rs1 + offset
         else
             core.execution_reg = core.registers[core.rs1]+offset       # Storing Address
-        end
+        end   
     elseif core.present_operator=="LS"
         core.execution_reg = core.immediate_value_or_offset             # Storing Address
     elseif core.present_operator=="LB"

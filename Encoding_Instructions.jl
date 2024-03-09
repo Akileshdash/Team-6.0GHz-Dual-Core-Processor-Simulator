@@ -29,23 +29,23 @@ function encoding_all_instructions_to_memory(sim)
     #===========================================================================#
     
     #For core 2
-    # text_instructions,data_instructions = parse_assembly(file_path_2)
-    # final_text_inst = text_inst_parser(text_instructions)
-    # final_data_inst, variable_array = data_inst_parser(data_instructions)
+    text_instructions,data_instructions = parse_assembly(file_path_2)
+    final_text_inst = text_inst_parser(text_instructions)
+    final_data_inst, variable_array = data_inst_parser(data_instructions)
 
-    # label_array_2 = Vector{Tuple{String, Int}}()
-    # for str in final_text_inst
-    #     if !(in(split(str,' ')[1], operator_array))
-    #         label = split(str,' ')[1]
-    #         index = find_and_remove(label, final_text_inst) + initial_index -1
-    #         push!(label_array_2, (label, index))
-    #     end
-    # end
+    label_array_2 = Vector{Tuple{String, Int}}()
+    for str in final_text_inst
+        if !(in(split(str,' ')[1], operator_array))
+            label = split(str,' ')[1]
+            index = find_and_remove(label, final_text_inst) + initial_index -1
+            push!(label_array_2, (label, index))
+        end
+    end
 
-    # sim.cores[2].program = final_text_inst
-    # variable_address_array = alloc_dataSeg_in_memory(sim.memory, final_data_inst, sim.cores[2], variable_array)
-    # variable_address_array .-=1
-    # initial_index = encoding_Instructions(sim.cores[2],sim.memory,initial_index,variable_array,label_array_2,variable_address_array)
+    sim.cores[2].program = final_text_inst
+    variable_address_array = alloc_dataSeg_in_memory(sim.memory, final_data_inst, sim.cores[2], variable_array)
+    variable_address_array .-=1
+    initial_index = encoding_Instructions(sim.cores[2],sim.memory,initial_index,variable_array,label_array_2,variable_address_array)
 end
 
 #==========================================================================================================

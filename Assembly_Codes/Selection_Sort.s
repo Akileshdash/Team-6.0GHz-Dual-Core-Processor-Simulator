@@ -4,6 +4,7 @@ arr: .word 20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1
 size: .word 20
 temp: .word 100000
 .text
+lw x30,temp
 #Loading Address in x1
 la x1,arr
 #Load size in x2
@@ -49,7 +50,6 @@ update_min:
     j smallest_to_swap
     
 swap:
-    lw x30,temp
     beq x5,x30,outer_loop
     sw x5,0(x3)
     sw x6,0(x10)

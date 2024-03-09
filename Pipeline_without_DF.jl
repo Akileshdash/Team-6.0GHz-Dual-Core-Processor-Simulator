@@ -1,12 +1,28 @@
-include("Execute_Operation_phase2.jl")
+include("Execute_Operation.jl")
                             
 #==========================================================================================================
                                                Run Function
 ===========================================================================================================#
 
 function run_without_DF(processor::Processor)
+    while !processor.cores[1].writeBack_of_last_instruction&&!processor.cores[2].writeBack_of_last_instruction
+        processor.clock+=1
+        for i in 1:2
+            processor.cores[i].clock+=1
+            if processor.cores[i].stall_in_present_clock
+                # println("Stall Present at clock : ",processor.clock)
+                processor.cores[i].stall_count+=1
+            end 
+            writeBack(processor.cores[i],processor)
+            memory_access(processor.cores[i],processor)
+            execute(processor.cores[i],processor)
+            instructionDecode_RegisterFetch(processor.cores[i],processor)
+            instruction_Fetch(processor.cores[i],processor)
+        end
+    end
     while !processor.cores[1].writeBack_of_last_instruction
         processor.clock+=1
+        processor.cores[1].clock+=1
         if processor.cores[1].stall_in_present_clock
             # println("Stall Present at clock : ",processor.clock)
             processor.cores[1].stall_count+=1
@@ -16,6 +32,19 @@ function run_without_DF(processor::Processor)
         execute(processor.cores[1],processor)
         instructionDecode_RegisterFetch(processor.cores[1],processor)
         instruction_Fetch(processor.cores[1],processor)
+    end
+    while !processor.cores[2].writeBack_of_last_instruction
+        processor.clock+=1
+        processor.cores[2].clock+=1
+        if processor.cores[2].stall_in_present_clock
+            # println("Stall Present at clock : ",processor.clock)
+            processor.cores[2].stall_count+=1
+        end 
+        writeBack(processor.cores[2],processor)
+        memory_access(processor.cores[2],processor)
+        execute(processor.cores[2],processor)
+        instructionDecode_RegisterFetch(processor.cores[2],processor)
+        instruction_Fetch(processor.cores[2],processor)
     end
 end
 
@@ -286,7 +315,13 @@ function instruction_Fetch(core::Core_Object,processor::Processor)
         end
         return
     end
-    if core.pc<=length(core.program)||core.branch_to_be_taken_in_present_clock
+    limit=0
+    if core.id==1
+        limit = length(core.program)
+    elseif core.id==2
+        limit = length(processor.cores[1].program)+length(processor.cores[2].program)
+    end
+    if core.pc<=limit||core.branch_to_be_taken_in_present_clock
         if core.branch_to_be_taken_in_present_clock
             core.branch_to_be_taken_in_present_clock = false
             core.stall_count+=2
