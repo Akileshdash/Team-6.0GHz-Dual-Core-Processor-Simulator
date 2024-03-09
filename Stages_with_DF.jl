@@ -28,7 +28,7 @@ end
 function writeBack(core::Core_Object,processor::Processor)
     core.instruction_reg_after_Write_Back = Instruction_to_decode = core.instruction_reg_after_Memory_Access
     if Instruction_to_decode!="uninitialized"
-        # println("Instruction Write Back at clock : ",processor.clock)
+        println("Instruction Write Back at clock : ",processor.clock)
         core.instruction_count+=1
         rd = parse(Int,Instruction_to_decode[21:25], base=2) + 1
         opcode = Instruction_to_decode[26:32]
@@ -53,7 +53,7 @@ function memory_access(core::Core_Object,processor::Processor)
     memory = processor.memory
     core.instruction_reg_after_Memory_Access = Instruction_to_decode = core.instruction_reg_after_Execution
     if core.instruction_reg_after_Memory_Access!="uninitialized"
-        # println("Instruction Memory Access at clock : ",processor.clock)
+        println("Instruction Memory Access at clock : ",processor.clock)
         rs1 = parse(Int,Instruction_to_decode[13:17], base=2) + 1
         opcode = Instruction_to_decode[26:32]
         func3 = Instruction_to_decode[18:20]
@@ -121,7 +121,7 @@ function execute(core::Core_Object,processor::Processor)
     end
     core.instruction_reg_after_Execution = core.instruction_reg_after_ID_RF
     if core.instruction_reg_after_Execution!="uninitialized"
-        # println("Instruction Executed at clock : ",processor.clock)
+        println("Instruction Executed at clock : ",processor.clock)
         Execute_Operation(core) 
         core.writeBack_of_last_instruction = false
     end
@@ -175,7 +175,7 @@ function instructionDecode_RegisterFetch(core::Core_Object,processor::Processor)
         func3 = Instruction_to_decode[18:20]
         core.present_operator = get_instruction(opcode, func3)
 
-        # println("Instruction Decoded at clock : ",processor.clock)
+        println("Instruction Decoded at clock : ",processor.clock)
         #======================================================================
                             Checking for I Format Operations          
         ======================================================================#
@@ -203,23 +203,25 @@ function instructionDecode_RegisterFetch(core::Core_Object,processor::Processor)
                             Checking for R Format Operations          
         ======================================================================#
         #R Type Instructions done
-        elseif opcode=="0110011"        #Checking It is not a branch Statement
+        elseif opcode=="0110011"        #Checking It is R Statement
             #Checking Data Dependency on one instruction before
             if (core.rs2==core.rd||core.rs1==core.rd)&&(core.previous_operator!="SW"||core.previous_operator!="SB")
                 if core.rs1==core.rd
                     core.rs1_dependent_on_previous_instruction = true
                     core.data_forwarding_on = true
                     if core.previous_operator == "LW"||core.previous_operator == "LB"
-                        core.stall_due_to_df = true
+                        # core.stall_due_to_df = true
+                        core.stall_due_to_load = true
                     else
-                        core.data_forwarding_reg_rs1  = core.execution_reg
+                        core.data_forwarng_reg_rs1di  = core.execution_reg
                     end
                 end
                 if core.rs2==core.rd
                     core.rs2_dependent_on_previous_instruction = true
                     core.data_forwarding_on = true
                     if core.previous_operator == "LW"||core.previous_operator == "LB"
-                        core.stall_due_to_df = true
+                        # core.stall_due_to_df = true
+                        core.stall_due_to_load = true
                     else
                         core.data_forwarding_reg_rs2  = core.execution_reg
                     end
@@ -428,6 +430,8 @@ function instruction_Fetch(core::Core_Object,processor::Processor)
     if core.stall_due_to_load
         if !core.rs1_dependent_on_previous_instruction
             core.stall_due_to_load = false
+            core.stall_count+=1
+            println("stall in clock : ",processor.clock)
             return
         end
     end
@@ -476,7 +480,7 @@ function instruction_Fetch(core::Core_Object,processor::Processor)
         return
     end
     if core.pc<=length(core.program)
-        # println("Instruction fetch at clock : ",processor.clock)
+        println("Instruction fetch at clock : ",processor.clock)
         core.instruction_reg_after_IF = int_to_8bit_bin(memory[core.pc,4])*int_to_8bit_bin(memory[core.pc,3])*int_to_8bit_bin(memory[core.pc,2])*int_to_8bit_bin(memory[core.pc,1])
         core.writeBack_of_last_instruction = false
         core.pc+=1

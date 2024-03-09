@@ -63,7 +63,11 @@ mutable struct Core_Object
     writeBack_of_second_last_instruction::Bool
 
     #For Branch prediction
-    actual_branch_to_be_taken::Int
+    branch_to_be_taken_in_next_clock::Bool
+    branch_to_be_taken_in_present_clock::Bool
+    branch_pc::Int
+    branch_count::Int
+    branch_taken_count::Int
 end
 
 mutable struct Processor
@@ -131,8 +135,12 @@ function core_Init(id)
     writeBack_of_second_last_instruction = false
 
     #Branch Prediction
-    actual_branch_to_be_taken = 0
-    return Core_Object(id,registers, pc, program,instruction_count,stall_count,stall_in_present_clock,stall_at_instruction_fetch,stall_at_execution,stall_in_next_clock,stall_due_to_jump,stall_due_to_load,stall_due_to_df,data_forwarding_on,data_forwarding_for_Store_rs,data_forwarding_reg_i,data_forwarding_reg_rs1,data_forwarding_reg_rs2,data_forwarding_reg_rd,data_forwarding_for_branch,regi_dependent_on_previous_instruction,rs1_dependent_on_previous_instruction,rs2_dependent_on_previous_instruction,rd_dependent_on_previous_instruction,rs1_dependent_on_second_previous_instruction,rs2_dependent_on_second_previous_instruction,instruction_reg_after_IF,rd_second_before,rs2,rs1,rd,immediate_value_or_offset,present_operator,previous_operator,second_previous_operator,instruction_reg_after_ID_RF,temp_reg,execution_reg,instruction_reg_after_Execution,previous_mem_reg,mem_reg,instruction_reg_after_Memory_Access,instruction_reg_after_Write_Back,writeBack_of_last_instruction,writeBack_of_second_last_instruction,actual_branch_to_be_taken)
+    branch_to_be_taken_in_next_clock = false
+    branch_to_be_taken_in_present_clock = false
+    branch_pc = 0
+    branch_count = 0
+    branch_taken_count = 0
+    return Core_Object(id,registers, pc, program,instruction_count,stall_count,stall_in_present_clock,stall_at_instruction_fetch,stall_at_execution,stall_in_next_clock,stall_due_to_jump,stall_due_to_load,stall_due_to_df,data_forwarding_on,data_forwarding_for_Store_rs,data_forwarding_reg_i,data_forwarding_reg_rs1,data_forwarding_reg_rs2,data_forwarding_reg_rd,data_forwarding_for_branch,regi_dependent_on_previous_instruction,rs1_dependent_on_previous_instruction,rs2_dependent_on_previous_instruction,rd_dependent_on_previous_instruction,rs1_dependent_on_second_previous_instruction,rs2_dependent_on_second_previous_instruction,instruction_reg_after_IF,rd_second_before,rs2,rs1,rd,immediate_value_or_offset,present_operator,previous_operator,second_previous_operator,instruction_reg_after_ID_RF,temp_reg,execution_reg,instruction_reg_after_Execution,previous_mem_reg,mem_reg,instruction_reg_after_Memory_Access,instruction_reg_after_Write_Back,writeBack_of_last_instruction,writeBack_of_second_last_instruction,branch_to_be_taken_in_next_clock,branch_to_be_taken_in_present_clock,branch_pc,branch_count,branch_taken_count)
 end
 
 function processor_Init()

@@ -4,12 +4,11 @@ include("Execute_Operation_phase2.jl")
                                                Run Function
 ===========================================================================================================#
 
-
 function run_without_DF(processor::Processor)
     while !processor.cores[1].writeBack_of_last_instruction
         processor.clock+=1
         if processor.cores[1].stall_in_present_clock
-            #println("Stall Present at clock : ",processor.clock)
+            # println("Stall Present at clock : ",processor.clock)
             processor.cores[1].stall_count+=1
         end 
         writeBack(processor.cores[1],processor)
@@ -93,6 +92,10 @@ end
 ===========================================================================================================#
 
 function execute(core::Core_Object,processor::Processor)
+    if core.branch_to_be_taken_in_present_clock
+        core.instruction_reg_after_Execution = "uninitialized"
+        return
+    end
     if core.stall_in_present_clock||core.stall_at_execution
         core.instruction_reg_after_Execution = "uninitialized"
         return
@@ -116,19 +119,23 @@ function instructionDecode_RegisterFetch(core::Core_Object,processor::Processor)
     end
     core.instruction_reg_after_ID_RF = Instruction_to_decode = core.instruction_reg_after_IF
     if core.instruction_reg_after_ID_RF!="uninitialized"
-        # println("Instruction Decoded at clock : ",processor.clock)
+        # println("Instruction Decoded at clock : ",processor.clock )
+
         # Register Fetch
         core.rs2 = parse(Int,Instruction_to_decode[8:12], base=2)
         core.rs1 = parse(Int,Instruction_to_decode[13:17], base=2)
         rd = parse(Int,Instruction_to_decode[21:25], base=2)
         
         core.immediate_value_or_offset = bin_string_to_signed_int(Instruction_to_decode[1:12])
+        core.second_previous_operator = core.previous_operator
+        core.previous_operator = core.present_operator
         #Instruction Decode
         opcode = Instruction_to_decode[26:32]
         func3 = Instruction_to_decode[18:20]
         core.present_operator = get_instruction(opcode, func3)
+
         if opcode=="0010011"    # I Format Instructions
-            if core.rs1==core.rd
+            if core.rs1==core.rd&&(core.previous_operator!="BEQ"&&core.previous_operator!="BNE"&&core.previous_operator!="BLT"&&core.previous_operator!="BGE")
                 core.stall_in_next_clock = true
                 #println("It is dependent 0.1")
             elseif core.rs1 == core.rd_second_before
@@ -138,7 +145,7 @@ function instructionDecode_RegisterFetch(core::Core_Object,processor::Processor)
                     #println("It is dependent 0.2")
                 end
             end
-        elseif opcode=="1101111"||opcode=="1100111"
+        elseif opcode=="1101111"||opcode=="1100111"  #JAL Format Instructions
             core.rd_second_before = core.rd
             core.rd = -1
             core.stall_due_to_jump = true
@@ -148,7 +155,7 @@ function instructionDecode_RegisterFetch(core::Core_Object,processor::Processor)
 
         elseif opcode!="1100011"        #Checking It is not a branch Statement
             #Checking Data Dependency on one instruction before
-            if core.rs2==core.rd||core.rs1==core.rd
+            if (core.rs2==core.rd||core.rs1==core.rd)&&(core.previous_operator!="BEQ"&&core.previous_operator!="BNE"&&core.previous_operator!="BLT"&&core.previous_operator!="BGE")
                 core.stall_in_next_clock = true
                 #println("It is dependent 1")
             #Checking Data Dependency on one more instruction before
@@ -161,14 +168,13 @@ function instructionDecode_RegisterFetch(core::Core_Object,processor::Processor)
             end
 
         elseif opcode=="1100011"    #Checking It is a branch Instruction
-
+            core.branch_count+=1
             #In Branch instructions Data is Dependent on last instruction 
 
-            if core.rs1==core.rd||rd==core.rd
+            if (core.rs1==core.rd||rd==core.rd)&&(core.previous_operator!="BEQ"&&core.previous_operator!="BNE"&&core.previous_operator!="BLT"&&core.previous_operator!="BGE")
                 core.stall_in_next_clock = true
-                #println("It is dependent 3")
-                core.writeBack_of_last_instruction = false
-                core.stall_at_instruction_fetch = true
+                core.writeBack_of_last_instruction = false       
+                # Even If dependency , the instruction shall be fetched bcz our static predictor is always branch not taken
                 core.rd_second_before = core.rd
                 core.rd=rd
                 return
@@ -176,57 +182,59 @@ function instructionDecode_RegisterFetch(core::Core_Object,processor::Processor)
 
             #Checking Data Dependency on second last instruction 
 
-            if core.rs1==core.rd_second_before || rd==core.rd_second_before
+            if (core.rs1==core.rd_second_before || rd==core.rd_second_before)&&(core.second_previous_operator!="BEQ"&&core.second_previous_operator!="BNE"&&core.second_previous_operator!="BLT"&&core.second_previous_operator!="BGE")
                 if !core.writeBack_of_second_last_instruction
-                    core.stall_at_instruction_fetch = true
+                    # core.stall_at_instruction_fetch = true
+                    # Even If dependency , the instruction shall be fetched bcz our static predictor is always branch not taken
                     core.stall_at_execution = true
                     core.stall_in_next_clock = true
                     #println("It is dependent 4")
                 end
-                core.stall_at_instruction_fetch = true
+                # core.stall_at_instruction_fetch = true
                 return
             end
             offset = div(bin_string_to_signed_int(Instruction_to_decode[1:12]*"0"),4)
             if core.present_operator == "BEQ"
-                if core.registers[core.rs1+1]==core.registers[rd+1]
-                    if offset!=1        #Branch to be chosen is not the next one
-                        core.stall_at_instruction_fetch = true
-                        if core.stall_at_execution && core.stall_in_next_clock
-                            core.stall_at_execution = false
-                            core.stall_in_next_clock = false
-                        end
-                    end
-                end
+                # if core.registers[core.rs1+1]==core.registers[rd+1]
+                #     if offset!=1        #Branch to be chosen is not the next one
+                #         # core.stall_at_instruction_fetch = true
+                #         #Only after the execution stage we will know which branch to be taken
+                #         if core.stall_at_execution && core.stall_in_next_clock
+                #             core.stall_at_execution = false
+                #             core.stall_in_next_clock = false
+                #         end
+                #     end
+                # end
             elseif core.present_operator == "BNE"
-                if core.registers[core.rs1+1]!=core.registers[rd+1]
-                    if offset!=1        #Branch to be chosen is not the next one
-                        core.stall_at_instruction_fetch = true
-                        if core.stall_at_execution && core.stall_in_next_clock
-                            core.stall_at_execution = false
-                            core.stall_in_next_clock = false
-                        end
-                    end
-                end
+                # if core.registers[core.rs1+1]!=core.registers[rd+1]
+                #     if offset!=1        #Branch to be chosen is not the next one
+                #         core.stall_at_instruction_fetch = true
+                #         if core.stall_at_execution && core.stall_in_next_clock
+                #             core.stall_at_execution = false
+                #             core.stall_in_next_clock = false
+                #         end
+                #     end
+                # end
             elseif core.present_operator == "BLT"
-                if core.registers[core.rs1+1]<core.registers[rd+1]
-                    if offset!=1        #Branch to be chosen is not the next one
-                        core.stall_at_instruction_fetch = true
-                        if core.stall_at_execution && core.stall_in_next_clock
-                            core.stall_at_execution = false
-                            core.stall_in_next_clock = false
-                        end
-                    end
-                end
+                # if core.registers[core.rs1+1]<core.registers[rd+1]
+                #     if offset!=1        #Branch to be chosen is not the next one
+                #         core.stall_at_instruction_fetch = true
+                #         if core.stall_at_execution && core.stall_in_next_clock
+                #             core.stall_at_execution = false
+                #             core.stall_in_next_clock = false
+                #         end
+                #     end
+                # end
             elseif core.present_operator == "BGE"
-                if core.registers[core.rs1+1]>=core.registers[rd+1]
-                    if offset!=1        #Branch to be chosen is not the next one
-                        core.stall_at_instruction_fetch = true
-                        if core.stall_at_execution && core.stall_in_next_clock
-                            core.stall_at_execution = false
-                            core.stall_in_next_clock = false
-                        end
-                    end
-                end
+                # if core.registers[core.rs1+1]>=core.registers[rd+1]
+                #     if offset!=1        #Branch to be chosen is not the next one
+                #         core.stall_at_instruction_fetch = true
+                #         if core.stall_at_execution && core.stall_in_next_clock
+                #             core.stall_at_execution = false
+                #             core.stall_in_next_clock = false
+                #         end
+                #     end
+                # end
             end
         end
         core.writeBack_of_last_instruction = false
@@ -278,8 +286,14 @@ function instruction_Fetch(core::Core_Object,processor::Processor)
         end
         return
     end
-    if core.pc<=length(core.program)
-        # println("Instruction fetch at clock : ",processor.clock)
+    if core.pc<=length(core.program)||core.branch_to_be_taken_in_present_clock
+        if core.branch_to_be_taken_in_present_clock
+            core.branch_to_be_taken_in_present_clock = false
+            core.stall_count+=2
+            core.instruction_reg_after_ID_RF = "uninitialized"
+            core.pc = core.branch_pc
+        end
+        # println("Instruction fetch at clock : ",processor.clock," pc = ",core.pc)
         core.instruction_reg_after_IF = int_to_8bit_bin(memory[core.pc,4])*int_to_8bit_bin(memory[core.pc,3])*int_to_8bit_bin(memory[core.pc,2])*int_to_8bit_bin(memory[core.pc,1])
         core.writeBack_of_last_instruction = false
         core.pc+=1
@@ -290,5 +304,9 @@ function instruction_Fetch(core::Core_Object,processor::Processor)
     if core.stall_in_next_clock
         core.stall_in_present_clock = true
         core.stall_in_next_clock = false
+    end
+    if core.branch_to_be_taken_in_next_clock #Branch to be taken in next clock
+        core.branch_to_be_taken_in_present_clock = true
+        core.branch_to_be_taken_in_next_clock = false
     end
 end

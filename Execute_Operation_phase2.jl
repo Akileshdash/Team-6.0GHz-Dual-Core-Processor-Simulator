@@ -221,7 +221,9 @@ function  Execute_Operation(core::Core_Object)
         end
         if rs1_value == rs2_value
             if offset!=1
-                core.pc = core.pc + offset - 1      #Because after IF stage we are incrementing the pc
+                core.branch_taken_count+=1
+                core.branch_to_be_taken_in_next_clock= true
+                core.branch_pc = core.pc + offset - 2      #Because after IF stage we are incrementing the pc
                 # println("Instruction fetched from pc : ",core.pc)
                 core.rd = -1
             end
@@ -247,7 +249,9 @@ function  Execute_Operation(core::Core_Object)
         end
         if rs1_value != rs2_value
             if offset!=1
-                core.pc = core.pc + offset - 1        #Because after IF stage we are incrementing the pc
+                core.branch_taken_count+=1
+                core.branch_to_be_taken_in_next_clock= true
+                core.branch_pc = core.pc + offset - 2        #Because after IF stage we are incrementing the pc
                 # println("Instruction fetched from pc : ",core.pc)
                 core.rd = -1
             end
@@ -273,9 +277,13 @@ function  Execute_Operation(core::Core_Object)
         end
         if rs1_value < rs2_value
             if offset!=1
-                core.pc = core.pc + offset - 1      #Because after IF stage we are incrementing the pc
+                core.branch_taken_count+=1
+                core.branch_to_be_taken_in_next_clock= true
+                core.branch_pc = core.pc + offset - 2      #Because after IF stage we are incrementing the pc
                 # println("Instruction fetched from pc : ",core.pc)
                 core.rd = - 1
+            elseif offset==1
+                core.branch_not_taken_count+=1
             end
         end
     elseif core.present_operator=="BGE"
@@ -299,7 +307,9 @@ function  Execute_Operation(core::Core_Object)
         end
         if rs1_value >= rs2_value
             if offset!=1
-                core.pc = core.pc + offset - 1      #Because after IF stage we are incrementing the pc
+                core.branch_taken_count+=1
+                core.branch_to_be_taken_in_next_clock= true
+                core.branch_pc = core.pc + offset - 2      #Because after IF stage we are incrementing the pc
                 # println("Instruction fetched from pc : ",core.pc)
                 core.rd = -1
             end

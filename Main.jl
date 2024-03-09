@@ -37,11 +37,12 @@
 include("parser.jl")
 # include("Decoding_Instructions.jl")
 include("Encoding_Instructions.jl")
-# include("Stages_without_DF.jl")
-include("Stages_with_DF.jl")
+include("Stages_without_DF.jl")
+# include("Stages_with_DF.jl")
 
-file_path_1 = "./Assembly_Codes/Bubble_Sort.s"
-file_path_2 = "./Assembly_Codes/Selection_Sort.s"
+# file_path_1 = "./Assembly_Codes/Bubble_Sort.s"
+file_path_2 = "./Assembly_Codes/Bubble_Sort.s"
+file_path_1 = "./Assembly_Codes/Selection_Sort.s"
 
 #Initialize a processor object ( Check "Processor_Core_Init.jl" File)
 sim = processor_Init()  
@@ -55,23 +56,23 @@ println("encoding done")
 # println("\nData Segment of Core 1 : \n")
 # Display_Memory(sim,513,535)
 
-# run_without_DF(sim)
-run_with_DF(sim)
-
+run_without_DF(sim)
+# run_with_DF(sim)
 
 #Display a block of the memory of processor (syntax explained at the top of this file)
 #Check the file "Helper_Functions" for this function
 # println("\nData Segment of Core 2 : \n")
 # Display_Memory(sim,769,790)
-println("\nData Segment of Core 1 : \n")
-Display_Memory(sim,513,535)
-# Display_Memory(sim,513,520)
+# println("\nData Segment of Core 1 : \n")
+# Display_Memory(sim,513,535)
+Display_Memory(sim,513,517)
 # println("\nCode Segment : \n")
 
 println(sim.cores[1].registers)
 println("Number of clocks = ",sim.clock)
 println("Number of instructions executed in core 1 = ",sim.cores[1].instruction_count)
 println("Number of stalls = ",sim.cores[1].stall_count)
+println("Branch Prediction Accuracy = ",sim.cores[1].branch_taken_count/sim.cores[1].branch_count)
 println("IPC = ",sim.cores[1].instruction_count/sim.clock )
 #Printing the total number of clocks the processor has taken to execute both the cores instructions 
 # println("\nNumber of clocks taken for comuting both instructions ( parallely ) = ",sim.clock)
