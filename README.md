@@ -40,7 +40,7 @@ julia main.jl
       - For Core 2, instructions are stored after the instructions of Core 1 (starting_row = next row after the last instruction of Core 1).
 
 ## Minutes of Meetings
-### `Meeting 8: Date: 8 Mar 2024 `
+### `Meeting 11: Date: 8 Mar 2024 `
 - Hazard Detection
     - Data Hazard Done
     - Structural Hazard
@@ -49,14 +49,14 @@ julia main.jl
 - Branch Predictor Accuracy
 - Variable Latency
     - Planned for Add, Sub and Addi as these were the only arithmetic instructions which we used in the sorting files
-### `Meeting 8: Date: 6 Mar 2024 `
+### `Meeting 10: Date: 6 Mar 2024 `
 - Data Forwarding
     - Data dependency check when interupted by branch and jump statements .
 - Branch Prediction
     - Consideration of always branch not taken .
         - even though this would yield lesser branch prediction accuracy this was planned to implement because it was comparatively easier .
 
-### `Meeting 8: Date: 3 Mar 2024 `
+### `Meeting 9: Date: 3 Mar 2024 `
 - Discussion on Stalls
     - Read after write and write after read hazards detection
     - Stalls due to Branch 
