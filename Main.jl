@@ -39,8 +39,11 @@ include("Encoding_Instructions.jl")
 include("Pipeline_without_DF.jl")
 include("Pipeline_with_DF.jl")
 
-file_path_1 = "./Assembly_Codes/Bubble_Sort.s"
-file_path_2 = "./Assembly_Codes/Selection_Sort.s"
+file_path_1 = "./Assembly_Codes/Selection_Sort.s"
+file_path_2 = "./Assembly_Codes/Bubble_Sort.s"
+
+# file_path_1 = "./Assembly_Codes/test1.asm"
+# file_path_1 = "./Assembly_Codes/test2.asm"
 
 #Initialize a processor object ( Check "Processor_Core_Init.jl" File)
 sim = processor_Init()  
@@ -48,6 +51,12 @@ sim = processor_Init()
 #After Creation of Processor, we are encoding the asm instructions in both files into the memory of processor Check the file "Encoding_Instructions.jl" for this function
 encoding_all_instructions_to_memory(sim)
 println("encoding done")
+
+print("How much latency in ADDI : ")
+i = readline()
+for j in 1:2
+    sim.cores[j].addi_variable_latency = parse(Int,i)
+end
 
 #Now we are running the processor ( Check the file "Stages.jl" to run the processor parallely or sequentially)
 println("To run the simulator with:\nData Forwarding \tpress 1\nWithout Data Forwarding\tpress 2")
@@ -63,10 +72,10 @@ end
 
 # println("\nData Segment of Core 2 : \n")
 # Display_Memory(sim,769,790)
-# println("\nData Segment of Core 1 : \n")
-# Display_Memory(sim,513,535)
+println("\nData Segment of Core 1 : \n")
+Display_Memory(sim,513,535)
 
-# println(sim.cores[1].registers)
+println(sim.cores[1].registers)
 println("---------------------------------------------------------------------------------------------------------------------------------------------------------")
 println("|\tTotal Number of clocks = ",sim.clock,"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t|")
 println("---------------------------------------------------------------------------------------------------------------------------------------------------------")

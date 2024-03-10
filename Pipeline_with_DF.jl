@@ -7,21 +7,21 @@ include("Execute_Operation.jl")
 
 function run_with_DF(processor::Processor)
     println("Running with DF")
-    while !processor.cores[1].writeBack_of_last_instruction&&!processor.cores[2].writeBack_of_last_instruction
-        processor.clock+=1
-        for i in 1:2
-            processor.cores[i].clock+=1
-            if processor.cores[i].stall_in_present_clock
-                # println("Stall Present at clock : ",processor.clock)
-                processor.cores[i].stall_count+=1
-            end 
-            writeBack_with_DF(processor.cores[i],processor)
-            memory_access_with_DF(processor.cores[i],processor)
-            execute_with_DF(processor.cores[i],processor)
-            instructionDecode_RegisterFetch_with_DF(processor.cores[i],processor)
-            instruction_Fetch_with_DF(processor.cores[i],processor)
-        end
-    end
+    # while !processor.cores[1].writeBack_of_last_instruction&&!processor.cores[2].writeBack_of_last_instruction
+    #     processor.clock+=1
+    #     for i in 1:2
+    #         processor.cores[i].clock+=1
+    #         if processor.cores[i].stall_in_present_clock
+    #             # println("Stall Present at clock : ",processor.clock)
+    #             processor.cores[i].stall_count+=1
+    #         end 
+    #         writeBack_with_DF(processor.cores[i],processor)
+    #         memory_access_with_DF(processor.cores[i],processor)
+    #         execute_with_DF(processor.cores[i],processor)
+    #         instructionDecode_RegisterFetch_with_DF(processor.cores[i],processor)
+    #         instruction_Fetch_with_DF(processor.cores[i],processor)
+    #     end
+    # end
     while !processor.cores[1].writeBack_of_last_instruction
         processor.clock+=1
         processor.cores[1].clock+=1
@@ -35,20 +35,26 @@ function run_with_DF(processor::Processor)
         instructionDecode_RegisterFetch_with_DF(processor.cores[1],processor)
         instruction_Fetch_with_DF(processor.cores[1],processor)
     end
-    while !processor.cores[2].writeBack_of_last_instruction
-        processor.clock+=1
-        processor.cores[2].clock+=1
-        if processor.cores[2].stall_in_present_clock
-            # println("Stall Present at clock : ",processor.clock)
-            processor.cores[2].stall_count+=1
-        end 
-        writeBack_with_DF(processor.cores[2],processor)
-        memory_access_with_DF(processor.cores[2],processor)
-        execute_with_DF(processor.cores[2],processor)
-        instructionDecode_RegisterFetch_with_DF(processor.cores[2],processor)
-        instruction_Fetch_with_DF(processor.cores[2],processor)
+    # while !processor.cores[2].writeBack_of_last_instruction
+    #     processor.clock+=1
+    #     processor.cores[2].clock+=1
+    #     if processor.cores[2].stall_in_present_clock
+    #         # println("Stall Present at clock : ",processor.clock)
+    #         processor.cores[2].stall_count+=1
+    #     end 
+    #     writeBack_with_DF(processor.cores[2],processor)
+    #     memory_access_with_DF(processor.cores[2],processor)
+    #     execute_with_DF(processor.cores[2],processor)
+    #     instructionDecode_RegisterFetch_with_DF(processor.cores[2],processor)
+    #     instruction_Fetch_with_DF(processor.cores[2],processor)
+    # end
+    for i in 1:2
+        if processor.cores[i].present_operator=="ADDI"
+            if processor.cores[i].addi_variable_latency>1
+                processor.cores[i].stall_count-=(processor.cores[i].addi_variable_latency-1)
+            end
+        end
     end
-    
 end
 
 #==========================================================================================================
@@ -81,6 +87,10 @@ end
 
 function memory_access_with_DF(core::Core_Object,processor::Processor)
     memory = processor.memory
+    if core.variable_latency_actual_count != core.variable_latency_count
+        core.instruction_reg_after_Memory_Access="uninitialized"
+        return
+    end
     core.instruction_reg_after_Memory_Access = Instruction_to_decode = core.instruction_reg_after_Execution
     if core.instruction_reg_after_Memory_Access!="uninitialized"
         # println("Instruction Memory Access at clock : ",processor.clock)
@@ -137,6 +147,17 @@ end
 ===========================================================================================================#
 
 function execute_with_DF(core::Core_Object,processor::Processor)
+    if core.variable_latency_count>1
+        # core.instruction_reg_after_Execution = "uninitialized"
+        core.writeBack_of_last_instruction = false
+        core.variable_latency_count-=1
+        core.stall_count+=1
+        return
+    end
+    if core.variable_latency_count==1
+        core.variable_latency_present_clock = false
+        core.variable_latency_actual_count =1
+    end
     if core.branch_to_be_taken_in_present_clock
         core.instruction_reg_after_Execution = "uninitialized"
         return
@@ -167,6 +188,9 @@ end
 ===========================================================================================================#
 
 function instructionDecode_RegisterFetch_with_DF(core::Core_Object,processor::Processor)
+    if core.stall_in_present_clock||core.variable_latency_present_clock
+        return
+    end
     if core.stall_due_to_df
         if core.regi_dependent_on_previous_instruction
             #We are forwarding the data loaded from the mem reg to another temp reg which will be accessed in the execution stage
@@ -194,6 +218,7 @@ function instructionDecode_RegisterFetch_with_DF(core::Core_Object,processor::Pr
     core.instruction_reg_after_ID_RF = Instruction_to_decode = core.instruction_reg_after_IF
     if core.instruction_reg_after_ID_RF!="uninitialized"
 
+        # println("Instruction Decoded at clock : ",processor.clock)
         # Register Fetch
         core.rs2 = parse(Int,Instruction_to_decode[8:12], base=2)
         core.rs1 = parse(Int,Instruction_to_decode[13:17], base=2)
@@ -209,13 +234,22 @@ function instructionDecode_RegisterFetch_with_DF(core::Core_Object,processor::Pr
         func3 = Instruction_to_decode[18:20]
         core.present_operator = get_instruction(opcode, func3)
 
-        # println("Instruction Decoded at clock : ",processor.clock)
         #======================================================================
                             Checking for I Format Operations          
         ======================================================================#
         #I Type Instructions done
         #Data forwarding for I instructions done .Dependency of I instructions on Load Statements done. There is no dependency on Store statements
         if opcode=="0010011"    # I Format Instructions
+            if core.branch_to_be_taken_in_next_clock
+                return
+            end
+            if core.present_operator == "ADDI"
+                if core.addi_variable_latency>1
+                    core.variable_latency_next_clock = true
+                    core.variable_latency_actual_count = core.addi_variable_latency
+                    core.variable_latency_count = core.addi_variable_latency
+                end
+            end
             if (core.rs1==core.rd)&&(core.previous_operator!="SW"||core.previous_operator!="SB")
                 core.data_forwarding_on = true
                 core.regi_dependent_on_previous_instruction = true
@@ -246,7 +280,7 @@ function instructionDecode_RegisterFetch_with_DF(core::Core_Object,processor::Pr
                     if core.previous_operator == "LW"||core.previous_operator == "LB"
                         core.stall_due_to_load = true
                     else
-                        core.data_forwarng_reg_rs1di  = core.execution_reg
+                        core.data_forwarding_reg_rs1 = core.execution_reg
                     end
                 end
                 if core.rs2==core.rd
@@ -399,6 +433,13 @@ end
 
 function instruction_Fetch_with_DF(core::Core_Object,processor::Processor)
     memory = processor.memory
+    if core.variable_latency_present_clock
+        return
+    end
+    if core.variable_latency_next_clock
+        core.variable_latency_next_clock = false
+        core.variable_latency_present_clock = true
+    end
     if core.stall_due_to_jump
         core.stall_due_to_jump = false
         core.stall_count+=1
