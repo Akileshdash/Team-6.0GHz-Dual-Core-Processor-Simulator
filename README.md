@@ -40,6 +40,30 @@ julia main.jl
       - For Core 2, instructions are stored after the instructions of Core 1 (starting_row = next row after the last instruction of Core 1).
 
 ## Minutes of Meetings
+### `Meeting 8: Date: 8 Mar 2024 `
+- Hazard Detection
+    - Data Hazard Done
+    - Structural Hazard
+        - Mem of Load and Store and IF at same clock hazard detection planned to implement
+- IPC Calcukation
+- Branch Predictor Accuracy
+- Variable Latency
+    - Planned for Add, Sub and Addi as these were the only arithmetic instructions which we used in the sorting files
+### `Meeting 8: Date: 6 Mar 2024 `
+- Data Forwarding
+    - Data dependency check when interupted by branch and jump statements .
+- Branch Prediction
+    - Consideration of always branch not taken .
+        - even though this would yield lesser branch prediction accuracy this was planned to implement because it was comparatively easier .
+
+### `Meeting 8: Date: 3 Mar 2024 `
+- Discussion on Stalls
+    - Read after write and write after read hazards detection
+    - Stalls due to Branch 
+    - Stalls due to jump statements
+- Data Forwarding
+    - Dependecy check on last and second last instructions
+    - stalls till memory stage for load and store statements dependency
 ### `Meeting 8: Date: 29 Feb 2024 `
 - 5 stage cycle separation and Makefile - Preet
     - For IF , we need to create a new special purpose register
