@@ -46,7 +46,8 @@ end
 # println("\nData Segment of Core 1 : \n")
 # Display_Memory(sim,513,535)
 
-println(sim.cores[1].registers)
+println("Core 1 registers : ", sim.cores[1].registers)
+println("Core 2 registers : ",sim.cores[2].registers)
 println("---------------------------------------------------------------------------------------------------------------------------------------------------------")
 println("|\tTotal Number of clocks = ",sim.clock,"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t|")
 println("---------------------------------------------------------------------------------------------------------------------------------------------------------")
