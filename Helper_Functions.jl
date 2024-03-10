@@ -1,4 +1,8 @@
 include("Processor_Core_Init.jl")
+                    
+function predict(pc::Int)
+    return false
+end
 
 #= 30 Helper Functions have been defined =#
 
