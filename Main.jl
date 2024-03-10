@@ -39,11 +39,8 @@ include("Encoding_Instructions.jl")
 include("Pipeline_without_DF.jl")
 include("Pipeline_with_DF.jl")
 
-file_path_1 = "./Assembly_Codes/Selection_Sort.s"
-file_path_2 = "./Assembly_Codes/Bubble_Sort.s"
-
-# file_path_1 = "./Assembly_Codes/test1.asm"
-# file_path_1 = "./Assembly_Codes/test2.asm"
+file_path_2 = "./Assembly_Codes/Selection_Sort.s"
+file_path_1 = "./Assembly_Codes/Bubble_Sort.s"
 
 #Initialize a processor object ( Check "Processor_Core_Init.jl" File)
 sim = processor_Init()  
@@ -52,6 +49,16 @@ sim = processor_Init()
 encoding_all_instructions_to_memory(sim)
 println("encoding done")
 
+print("How much latency in ADD : ")
+i = readline()
+for j in 1:2
+    sim.cores[j].add_variable_latency = parse(Int,i)
+end
+print("How much latency in SUB : ")
+i = readline()
+for j in 1:2
+    sim.cores[j].sub_variable_latency = parse(Int,i)
+end
 print("How much latency in ADDI : ")
 i = readline()
 for j in 1:2
@@ -72,8 +79,8 @@ end
 
 # println("\nData Segment of Core 2 : \n")
 # Display_Memory(sim,769,790)
-println("\nData Segment of Core 1 : \n")
-Display_Memory(sim,513,535)
+# println("\nData Segment of Core 1 : \n")
+# Display_Memory(sim,513,535)
 
 println(sim.cores[1].registers)
 println("---------------------------------------------------------------------------------------------------------------------------------------------------------")

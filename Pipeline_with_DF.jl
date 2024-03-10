@@ -7,21 +7,21 @@ include("Execute_Operation.jl")
 
 function run_with_DF(processor::Processor)
     println("Running with DF")
-    # while !processor.cores[1].writeBack_of_last_instruction&&!processor.cores[2].writeBack_of_last_instruction
-    #     processor.clock+=1
-    #     for i in 1:2
-    #         processor.cores[i].clock+=1
-    #         if processor.cores[i].stall_in_present_clock
-    #             # println("Stall Present at clock : ",processor.clock)
-    #             processor.cores[i].stall_count+=1
-    #         end 
-    #         writeBack_with_DF(processor.cores[i],processor)
-    #         memory_access_with_DF(processor.cores[i],processor)
-    #         execute_with_DF(processor.cores[i],processor)
-    #         instructionDecode_RegisterFetch_with_DF(processor.cores[i],processor)
-    #         instruction_Fetch_with_DF(processor.cores[i],processor)
-    #     end
-    # end
+    while !processor.cores[1].writeBack_of_last_instruction&&!processor.cores[2].writeBack_of_last_instruction
+        processor.clock+=1
+        for i in 1:2
+            processor.cores[i].clock+=1
+            if processor.cores[i].stall_in_present_clock
+                # println("Stall Present at clock : ",processor.clock)
+                processor.cores[i].stall_count+=1
+            end 
+            writeBack_with_DF(processor.cores[i],processor)
+            memory_access_with_DF(processor.cores[i],processor)
+            execute_with_DF(processor.cores[i],processor)
+            instructionDecode_RegisterFetch_with_DF(processor.cores[i],processor)
+            instruction_Fetch_with_DF(processor.cores[i],processor)
+        end
+    end
     while !processor.cores[1].writeBack_of_last_instruction
         processor.clock+=1
         processor.cores[1].clock+=1
@@ -35,23 +35,30 @@ function run_with_DF(processor::Processor)
         instructionDecode_RegisterFetch_with_DF(processor.cores[1],processor)
         instruction_Fetch_with_DF(processor.cores[1],processor)
     end
-    # while !processor.cores[2].writeBack_of_last_instruction
-    #     processor.clock+=1
-    #     processor.cores[2].clock+=1
-    #     if processor.cores[2].stall_in_present_clock
-    #         # println("Stall Present at clock : ",processor.clock)
-    #         processor.cores[2].stall_count+=1
-    #     end 
-    #     writeBack_with_DF(processor.cores[2],processor)
-    #     memory_access_with_DF(processor.cores[2],processor)
-    #     execute_with_DF(processor.cores[2],processor)
-    #     instructionDecode_RegisterFetch_with_DF(processor.cores[2],processor)
-    #     instruction_Fetch_with_DF(processor.cores[2],processor)
-    # end
+    while !processor.cores[2].writeBack_of_last_instruction
+        processor.clock+=1
+        processor.cores[2].clock+=1
+        if processor.cores[2].stall_in_present_clock
+            # println("Stall Present at clock : ",processor.clock)
+            processor.cores[2].stall_count+=1
+        end 
+        writeBack_with_DF(processor.cores[2],processor)
+        memory_access_with_DF(processor.cores[2],processor)
+        execute_with_DF(processor.cores[2],processor)
+        instructionDecode_RegisterFetch_with_DF(processor.cores[2],processor)
+        instruction_Fetch_with_DF(processor.cores[2],processor)
+    end
     for i in 1:2
         if processor.cores[i].present_operator=="ADDI"
             if processor.cores[i].addi_variable_latency>1
                 processor.cores[i].stall_count-=(processor.cores[i].addi_variable_latency-1)
+            end
+        elseif processor.cores[i].present_operator=="ADD/SUB"
+            if processor.cores[i].add_variable_latency>1
+                processor.cores[i].stall_count-=(processor.cores[i].add_variable_latency-1)
+            end
+            if processor.cores[i].sub_variable_latency>1
+                processor.cores[i].stall_count-=(processor.cores[i].sub_variable_latency-1)
             end
         end
     end
@@ -116,10 +123,6 @@ function memory_access_with_DF(core::Core_Object,processor::Processor)
             if core.data_forwarding_for_Store_rs
                 bin = int_to_32bit_bin(core.mem_reg)
                 core.data_forwarding_for_Store_rs = false
-            # if core.data_forwarding_for_Store_rs
-            #     bin = int_to_32bit_bin(core.data_forwarding_reg_rs1)
-            #     core.data_forwarding_reg_rs1 = 0
-            #     core.data_forwarding_for_Store_rs = false
             else
                 bin = int_to_32bit_bin(core.registers[rs1])
             end
@@ -148,7 +151,6 @@ end
 
 function execute_with_DF(core::Core_Object,processor::Processor)
     if core.variable_latency_count>1
-        # core.instruction_reg_after_Execution = "uninitialized"
         core.writeBack_of_last_instruction = false
         core.variable_latency_count-=1
         core.stall_count+=1
@@ -273,23 +275,43 @@ function instructionDecode_RegisterFetch_with_DF(core::Core_Object,processor::Pr
         #R Type Instructions done
         elseif opcode=="0110011"        #Checking It is R Statement
             #Checking Data Dependency on one instruction before
-            if (core.rs2==core.rd||core.rs1==core.rd)&&(core.previous_operator!="SW"&&core.previous_operator!="SB"&&core.previous_operator!="BEQ"&&core.previous_operator!="BNE"&&core.previous_operator!="BLT"&&core.previous_operator!="BGE"&&core.previous_operator!="JAL")
-                if core.rs1==core.rd
-                    core.rs1_dependent_on_previous_instruction = true
-                    core.data_forwarding_on = true
-                    if core.previous_operator == "LW"||core.previous_operator == "LB"
-                        core.stall_due_to_load = true
-                    else
-                        core.data_forwarding_reg_rs1 = core.execution_reg
-                    end
+            if core.branch_to_be_taken_in_next_clock
+                return
+            end
+            #ADD
+            if core.present_operator == "ADD/SUB"&&Int(Instruction_to_decode[2])-48==0         
+                if core.add_variable_latency>1
+                    core.variable_latency_next_clock = true
+                    core.variable_latency_actual_count = core.add_variable_latency
+                    core.variable_latency_count = core.add_variable_latency
                 end
-                if core.rs2==core.rd
-                    core.rs2_dependent_on_previous_instruction = true
-                    core.data_forwarding_on = true
-                    if core.previous_operator == "LW"||core.previous_operator == "LB"
-                        core.stall_due_to_load = true
-                    else
-                        core.data_forwarding_reg_rs2  = core.execution_reg
+            #SUB
+            elseif core.present_operator == "ADD/SUB"&&Int(Instruction_to_decode[2])-48==1
+                if core.sub_variable_latency>1
+                    core.variable_latency_next_clock = true
+                    core.variable_latency_actual_count = core.sub_variable_latency
+                    core.variable_latency_count = core.sub_variable_latency
+                end
+            end
+            if !core.variable_latency_next_clock
+                if (core.rs2==core.rd||core.rs1==core.rd)&&(core.previous_operator!="SW"&&core.previous_operator!="SB"&&core.previous_operator!="BEQ"&&core.previous_operator!="BNE"&&core.previous_operator!="BLT"&&core.previous_operator!="BGE"&&core.previous_operator!="JAL")
+                    if core.rs1==core.rd
+                        core.rs1_dependent_on_previous_instruction = true
+                        core.data_forwarding_on = true
+                        if core.previous_operator == "LW"||core.previous_operator == "LB"
+                            core.stall_due_to_load = true
+                        else
+                            core.data_forwarding_reg_rs1 = core.execution_reg
+                        end
+                    end
+                    if core.rs2==core.rd
+                        core.rs2_dependent_on_previous_instruction = true
+                        core.data_forwarding_on = true
+                        if core.previous_operator == "LW"||core.previous_operator == "LB"
+                            core.stall_due_to_load = true
+                        else
+                            core.data_forwarding_reg_rs2  = core.execution_reg
+                        end
                     end
                 end
             end

@@ -5,21 +5,21 @@ include("Execute_Operation.jl")
 ===========================================================================================================#
 
 function run_without_DF(processor::Processor)
-    # while !processor.cores[1].writeBack_of_last_instruction&&!processor.cores[2].writeBack_of_last_instruction
-    #     processor.clock+=1
-    #     for i in 1:2
-    #         processor.cores[i].clock+=1
-    #         if processor.cores[i].stall_in_present_clock
-    #             # println("Stall Present at clock : ",processor.clock)
-    #             processor.cores[i].stall_count+=1
-    #         end 
-    #         writeBack(processor.cores[i],processor)
-    #         memory_access(processor.cores[i],processor)
-    #         execute(processor.cores[i],processor)
-    #         instructionDecode_RegisterFetch(processor.cores[i],processor)
-    #         instruction_Fetch(processor.cores[i],processor)
-    #     end
-    # end
+    while !processor.cores[1].writeBack_of_last_instruction&&!processor.cores[2].writeBack_of_last_instruction
+        processor.clock+=1
+        for i in 1:2
+            processor.cores[i].clock+=1
+            if processor.cores[i].stall_in_present_clock
+                # println("Stall Present at clock : ",processor.clock)
+                processor.cores[i].stall_count+=1
+            end 
+            writeBack(processor.cores[i],processor)
+            memory_access(processor.cores[i],processor)
+            execute(processor.cores[i],processor)
+            instructionDecode_RegisterFetch(processor.cores[i],processor)
+            instruction_Fetch(processor.cores[i],processor)
+        end
+    end
     while !processor.cores[1].writeBack_of_last_instruction
         processor.clock+=1
         processor.cores[1].clock+=1
@@ -33,23 +33,30 @@ function run_without_DF(processor::Processor)
         instructionDecode_RegisterFetch(processor.cores[1],processor)
         instruction_Fetch(processor.cores[1],processor)
     end
-    # while !processor.cores[2].writeBack_of_last_instruction
-    #     processor.clock+=1
-    #     processor.cores[2].clock+=1
-    #     if processor.cores[2].stall_in_present_clock
-    #         # println("Stall Present at clock : ",processor.clock)
-    #         processor.cores[2].stall_count+=1
-    #     end 
-    #     writeBack(processor.cores[2],processor)
-    #     memory_access(processor.cores[2],processor)
-    #     execute(processor.cores[2],processor)
-    #     instructionDecode_RegisterFetch(processor.cores[2],processor)
-    #     instruction_Fetch(processor.cores[2],processor)
-    # end
+    while !processor.cores[2].writeBack_of_last_instruction
+        processor.clock+=1
+        processor.cores[2].clock+=1
+        if processor.cores[2].stall_in_present_clock
+            # println("Stall Present at clock : ",processor.clock)
+            processor.cores[2].stall_count+=1
+        end 
+        writeBack(processor.cores[2],processor)
+        memory_access(processor.cores[2],processor)
+        execute(processor.cores[2],processor)
+        instructionDecode_RegisterFetch(processor.cores[2],processor)
+        instruction_Fetch(processor.cores[2],processor)
+    end
     for i in 1:2
         if processor.cores[i].present_operator=="ADDI"
             if processor.cores[i].addi_variable_latency>1
                 processor.cores[i].stall_count-=(processor.cores[i].addi_variable_latency-1)
+            end
+        elseif processor.cores[i].present_operator=="ADD/SUB"
+            if processor.cores[i].add_variable_latency>1
+                processor.cores[i].stall_count-=(processor.cores[i].add_variable_latency-1)
+            end
+            if processor.cores[i].sub_variable_latency>1
+                processor.cores[i].stall_count-=(processor.cores[i].sub_variable_latency-1)
             end
         end
     end
@@ -133,7 +140,6 @@ end
 
 function execute(core::Core_Object,processor::Processor)
     if core.variable_latency_count>1
-        # core.instruction_reg_after_Execution = "uninitialized"
         core.writeBack_of_last_instruction = false
         core.variable_latency_count-=1
         core.stall_count+=1
@@ -153,7 +159,6 @@ function execute(core::Core_Object,processor::Processor)
     end
     core.instruction_reg_after_Execution = core.instruction_reg_after_ID_RF
     if core.instruction_reg_after_Execution!="uninitialized"
-        # core.variable_latency_present_clock = false
         # println("Instruction Executed at clock : ",processor.clock)
         Execute_Operation(core) 
         core.writeBack_of_last_instruction = false
@@ -217,16 +222,36 @@ function instructionDecode_RegisterFetch(core::Core_Object,processor::Processor)
             return
 
         elseif opcode!="1100011"        #Checking It is not a branch Statement
-            #Checking Data Dependency on one instruction before
-            if (core.rs2==core.rd||core.rs1==core.rd)&&(core.previous_operator!="BEQ"&&core.previous_operator!="BNE"&&core.previous_operator!="BLT"&&core.previous_operator!="BGE")
-                if !core.writeBack_of_last_instruction
-                    core.stall_in_next_clock = true
+            if core.branch_to_be_taken_in_next_clock
+                return
+            end
+            #ADD
+            if core.present_operator == "ADD/SUB"&&Int(Instruction_to_decode[2])-48==0         
+                if core.add_variable_latency>1
+                    core.variable_latency_next_clock = true
+                    core.variable_latency_actual_count = core.add_variable_latency
+                    core.variable_latency_count = core.add_variable_latency
                 end
-            #Checking Data Dependency on one more instruction before
-            elseif (core.rs1==core.rd_second_before || core.rs2==core.rd_second_before)&&(core.second_previous_operator!="BEQ"&&core.second_previous_operator!="BNE"&&core.second_previous_operator!="BLT"&&core.second_previous_operator!="BGE"&&core.second_previous_operator!="SW")
-                if !core.writeBack_of_second_last_instruction
-                    core.stall_at_execution = true
-                    core.stall_in_next_clock = true
+            #SUB
+            elseif core.present_operator == "ADD/SUB"&&Int(Instruction_to_decode[2])-48==1
+                if core.sub_variable_latency>1
+                    core.variable_latency_next_clock = true
+                    core.variable_latency_actual_count = core.sub_variable_latency
+                    core.variable_latency_count = core.sub_variable_latency
+                end
+            end
+            if !core.variable_latency_next_clock
+                #Checking Data Dependency on one instruction before
+                if (core.rs2==core.rd||core.rs1==core.rd)&&(core.previous_operator!="BEQ"&&core.previous_operator!="BNE"&&core.previous_operator!="BLT"&&core.previous_operator!="BGE")
+                    if !core.writeBack_of_last_instruction
+                        core.stall_in_next_clock = true
+                    end
+                #Checking Data Dependency on one more instruction before
+                elseif (core.rs1==core.rd_second_before || core.rs2==core.rd_second_before)&&(core.second_previous_operator!="BEQ"&&core.second_previous_operator!="BNE"&&core.second_previous_operator!="BLT"&&core.second_previous_operator!="BGE"&&core.second_previous_operator!="SW")
+                    if !core.writeBack_of_second_last_instruction
+                        core.stall_at_execution = true
+                        core.stall_in_next_clock = true
+                    end
                 end
             end
 
