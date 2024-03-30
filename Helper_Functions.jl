@@ -33,6 +33,7 @@ function updatePrediction(taken::Bool,core::Core_Object)
 end
 
 #= 30 Helper Functions have been defined =#
+operator_array = ["add","sub","sll","xor","srl","sra","or","and","addi","xori","ori","andi","slli","srli","srai","li","la","andi","mv","lb","lh","lw","lbu","lhu","sb","sh","sw","beq","bne","blt","bgt","bge","bltu","bgeu","lui","jal","jalr","j",]
 
 instruction_formats = [
     "0110011" => "R",
