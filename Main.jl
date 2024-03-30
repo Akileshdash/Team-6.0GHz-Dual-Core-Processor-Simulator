@@ -6,7 +6,7 @@ include("pipeline_with_DF.jl")
 file_path_1 = "./Assembly_Codes/Bubble_Sort.s"
 file_path_2 = "./Assembly_Codes/Selection_Sort.s"
 
-#Initialize a processor object ( Check "Processor_Core_Init.jl" File)
+#Initialize a processor object (Check "Processor_Core_Init.jl" File)
 sim = processor_Init()  
 
 #After Creation of Processor, we are encoding the asm instructions in both files into the memory of processor Check the file "Encoding_Instructions.jl" for this function
@@ -24,8 +24,7 @@ else
 end
 
 
-#Display a block of the memory of processor (syntax explained at the top of this file) Check the file "Helper_Functions" for this function
-
+#Display a block of the memory of processor Check the file "Helper_Functions" for this function
 # println("\nData Segment of Core 2 : \n")
 # Display_Memory(sim,769,790)
 # println("\nData Segment of Core 1 : \n")

@@ -34,8 +34,6 @@ end
 
 #= 30 Helper Functions have been defined =#
 
-operator_array = ["add","sub","sll","xor","srl","sra","or","and","addi","xori","ori","andi","slli","srli","srai","li","la","andi","mv","lb","lh","lw","lbu","lhu","sb","sh","sw","beq","bne","blt","bgt","bge","bltu","bgeu","lui","jal","jalr","j",]
-
 instruction_formats = [
     "0110011" => "R",
     "0010011" => "I",
@@ -47,60 +45,8 @@ instruction_formats = [
     "1100111" => "JALR",  # Jump and Link Register Format
     "1111111" => "ECALL",  # ecall format
 ]
-R_format_instructions = [
-    "000" => "ADD/SUB",
-    "001" => "SLL",
-    "010" => "SLT",
-    "011" => "SLTU",
-    "100" => "XOR",
-    "101" => "SRL/SRA",
-    "110" => "OR",
-    "111" => "AND",
-]
-I_format_instructions = [
-    "000" => "ADDI",
-    "001" => "SLLI",
-    "010" => "SLTI",
-    "011" => "SLTIU",
-    "100" => "XORI",
-    "101" => "SRLI/SRAI",
-    "110" => "OR",
-    "111" => "ANDI",
-]
-L_format_instructions = [
-    "000" => "LB",
-    "001" => "LH",
-    "010" => "LW",
-    "011" => "LA",
-    "100" => "LBU",
-    "101" => "LHU",
-    "110" => "LS",
-]
-S_format_instructions = [
-    "000" => "SB",
-    "001" => "SH",
-    "010" => "SW",
-]
-B_format_instructions = [
-    "000" => "BEQ",
-    "001" => "BNE",
-    "100" => "BLT",
-    "101" => "BGE",
-    "110" => "BLTU",
-    "111" => "BGEU",
-]
 #==============================================================================================#
-instruction_formats_2 = Dict(
-    "0110011" => "R",
-    "0010011" => "I",
-    "0000011" => "L",  # Load Format
-    "0100011" => "S",  # Store Format
-    "1100011" => "B",  # Break Format
-    "0110111" => "U",  # Upper Immediate Format
-    "1101111" => "JAL",  # Jump Format
-    "1100111" => "JALR",  # Jump and Link Register Format
-    "1111111" => "ECALL",  # ecall format
-)
+
 operator_dict = Dict(
     #R
     "0110011" => Dict(
@@ -158,30 +104,6 @@ operator_dict = Dict(
         "anything" => "JALR",
     ),
 )
-operator_dict_RI = Dict(
-    #R
-    "0110011" => Dict(
-        "000" => "ADD/SUB",
-        "001" => "SLL",
-        "010" => "SLT",
-        "011" => "SLTU",
-        "100" => "XOR",
-        "101" => "SRL/SRA",
-        "110" => "OR",
-        "111" => "AND",
-    ),
-    #I
-    "0010011" => Dict(
-        "000" => "ADDI",
-        "001" => "SLLI",
-        "010" => "SLTI",
-        "011" => "SLTIU",
-        "100" => "XORI",
-        "101" => "SRLI/SRAI",
-        "110" => "OR",
-        "111" => "ANDI",
-    ),
-)
 
 function get_instruction(opcode::AbstractString, func3::AbstractString)
     if opcode in keys(operator_dict) && func3 in keys(operator_dict[opcode])
@@ -193,6 +115,7 @@ function get_instruction(opcode::AbstractString, func3::AbstractString)
     end
 end
 
+#==============================================================================================#
 
 function replace_commas_with_spaces(input_string::String)
     return replace(input_string, "," => " ")
