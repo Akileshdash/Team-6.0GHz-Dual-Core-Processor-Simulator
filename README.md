@@ -38,6 +38,8 @@ julia main.jl
     - Text Segment (Instructions):
       - For Core 1, instructions are stored from address 0 (starting_row = 1).
       - For Core 2, instructions are stored after the instructions of Core 1 (starting_row = next row after the last instruction of Core 1).
+7. Branch Prediction
+    - 2 bit branch prediction implemented
 
 ## Minutes of Meetings
 ### `Meeting 11: Date: 8 Mar 2024 `
