@@ -1,354 +1,237 @@
 include("Helper_Functions.jl")
 
-function  Execute_Operation(core::Core_Object)
-    Instruction_to_decode = core.instruction_reg_after_Execution
-    #Since Julia is 1 indexing arr[0] is not defined
-    core.rs1+=1
-    core.rs2+=1
-    core.rd+=1
-        #======================================================================
-                            Executing R Format Operations          
-        ======================================================================#
+function  Execute_Operation(core::Core_Object,instruction_EX::Instruction)
+    rd_dependent = false    #Temporary variable,we need to remove it afterwards
+    if !core.data_forwarding
+        instruction_EX.source_reg[1] = core.registers[instruction_EX.rs1+1]
+        instruction_EX.source_reg[2] = core.registers[instruction_EX.rs2+1]
+    else
+        # Checking dependency for rs1
+        if core.rs1_dependent_on_previous_instruction
+            instruction_EX.source_reg[1] = core.instruction_MEM.pipeline_reg 
+            core.rs1_dependent_on_previous_instruction = false
+        elseif core.rs1_dependent_on_second_previous_instruction
+            instruction_EX.source_reg[1] = core.instruction_WriteBack.pipeline_reg
+            core.rs1_dependent_on_second_previous_instruction = false
+        end
+        # Checking dependency for rs2
+        if core.rs2_dependent_on_previous_instruction
+            instruction_EX.source_reg[2] = core.instruction_MEM.pipeline_reg 
+            core.rs2_dependent_on_previous_instruction = false
+        elseif core.rs2_dependent_on_second_previous_instruction
+            instruction_EX.source_reg[2] = core.instruction_WriteBack.pipeline_reg
+            core.rs2_dependent_on_second_previous_instruction = false
+        end
+        # Checking dependency for rd because we have done encoding like that for Store and branch statements
+        if core.rd_dependent_on_previous_instruction
+            instruction_EX.rd = core.instruction_MEM.pipeline_reg 
+            core.rd_dependent_on_previous_instruction = false
+            rd_dependent = true
+        elseif core.rd_dependent_on_second_previous_instruction
+            instruction_EX.rd = core.instruction_WriteBack.pipeline_reg
+            core.rd_dependent_on_second_previous_instruction = false
+            rd_dependent = false
+        end
+    end
+
+    #======================================================================
+                        Executing R Format Operations          
+    ======================================================================#
     
-    if core.present_operator=="ADD/SUB"
-        if Int(Instruction_to_decode[2])-48==0
-            #Add operation
-            if core.data_forwarding_on
-                if core.data_forwarding_reg_rs1!=0&&core.data_forwarding_reg_rs2==0         #i.e rs1 is dependent and rs2 is not dependent
-                    core.execution_reg = core.data_forwarding_reg_rs1 + core.registers[core.rs2]
-                elseif core.data_forwarding_reg_rs1==0&&core.data_forwarding_reg_rs2!=0         #i.e rs1 is not dependent and rs2 is dependent
-                    core.execution_reg = core.registers[core.rs1] + core.data_forwarding_reg_rs2
-                else    #i.e both are dependent
-                    core.execution_reg = core.data_forwarding_reg_rs1 + core.data_forwarding_reg_rs2
-                end                    
-            else
-                core.execution_reg = core.registers[core.rs1] + core.registers[core.rs2]
-            end
-        elseif Int(Instruction_to_decode[2])-48==1
-            #Sub operation
-            if core.data_forwarding_on
-                if core.data_forwarding_reg_rs1!=0&&core.data_forwarding_reg_rs2==0         #i.e rs1 is dependent and rs2 is not dependent
-                    core.execution_reg = core.data_forwarding_reg_rs1 - core.registers[core.rs2]
-                elseif core.data_forwarding_reg_rs1==0&&core.data_forwarding_reg_rs2!=0         #i.e rs1 is not dependent and rs2 is dependent
-                    core.execution_reg = core.registers[core.rs1] - core.data_forwarding_reg_rs2
-                else    #i.e rs1 and rs2 are dependent
-                    core.execution_reg = core.data_forwarding_reg_rs1 - core.data_forwarding_reg_rs2
-                end                    
-            else
-                core.execution_reg = core.registers[core.rs1] - core.registers[core.rs2]
-            end
+    if instruction_EX.operator == "ADD/SUB"
+        if instruction_EX.Four_byte_instruction[2]=='0'    #ADD 
+            instruction_EX.pipeline_reg = instruction_EX.source_reg[1] + instruction_EX.source_reg[2]
+        else    #SUB
+            instruction_EX.pipeline_reg = instruction_EX.source_reg[1] - instruction_EX.source_reg[2]
         end
-    elseif core.present_operator=="SLL"
-        if core.data_forwarding_on
-            if core.data_forwarding_reg_rs1!=0&&core.data_forwarding_reg_rs2==0         #i.e rs1 is dependent and rs2 is not dependent
-                core.execution_reg = core.data_forwarding_reg_rs1 << core.registers[core.rs2]
-            elseif core.data_forwarding_reg_rs1==0&&core.data_forwarding_reg_rs2!=0         #i.e rs1 is not dependent and rs2 is dependent
-                core.execution_reg = core.registers[core.rs1] << core.data_forwarding_reg_rs2
-            else    #i.e both are dependent
-                core.execution_reg = core.data_forwarding_reg_rs1 << core.data_forwarding_reg_rs2
-            end                    
+    elseif instruction_EX.operator == "SLL"
+        instruction_EX.pipeline_reg = instruction_EX.source_reg[1] << instruction_EX.source_reg[2]
+    elseif instruction_EX.operator == "OR"
+        instruction_EX.pipeline_reg = instruction_EX.source_reg[1] | instruction_EX.source_reg[2]
+    elseif instruction_EX.operator == "AND"
+        instruction_EX.pipeline_reg = instruction_EX.source_reg[1] & instruction_EX.source_reg[2]
+
+    #======================================================================
+                        Executing I Format Operations          
+    ======================================================================#
+
+    elseif instruction_EX.operator == "ADDI"
+        instruction_EX.pipeline_reg = instruction_EX.source_reg[1] + instruction_EX.immediate_value_or_offset
+    elseif instruction_EX.operator == "ORI"
+        instruction_EX.pipeline_reg = instruction_EX.source_reg[1] | instruction_EX.immediate_value_or_offset
+    elseif instruction_EX.operator == "ANDI"
+        instruction_EX.pipeline_reg = instruction_EX.source_reg[1] & instruction_EX.immediate_value_or_offset
+    elseif instruction_EX.operator == "SLLI"
+        instruction_EX.pipeline_reg = instruction_EX.source_reg[1] << instruction_EX.immediate_value_or_offset
+    #======================================================================
+                        Executing Load Format Operations          
+    ======================================================================#
+
+    elseif (instruction_EX.operator == "LA") || (instruction_EX.operator == "LW") || (instruction_EX.operator == "LB")
+        instruction_EX.immediate_value_or_offset = parse(UInt,instruction_EX.Four_byte_instruction[1:12], base=2)
+        instruction_EX.pipeline_reg = instruction_EX.source_reg[1] + instruction_EX.immediate_value_or_offset
+
+    #======================================================================
+                        Executing Store Format Operations          
+    ======================================================================#
+
+    elseif (instruction_EX.operator == "SW") || (instruction_EX.operator == "SB")
+        if core.data_forwarding && core.store_dependency
+            instruction_EX.pipeline_reg = instruction_EX.rd + instruction_EX.immediate_value_or_offset
+            core.store_dependency = false
         else
-            core.execution_reg = core.registers[core.rs1] << core.registers[core.rs2]
-        end
-    elseif core.present_operator=="XOR"
-        if core.data_forwarding_on
-            if core.data_forwarding_reg_rs1!=0&&core.data_forwarding_reg_rs2==0         #i.e rs1 is dependent and rs2 is not dependent
-                core.execution_reg = core.data_forwarding_reg_rs1 $ core.registers[core.rs2]
-            elseif core.data_forwarding_reg_rs1==0&&core.data_forwarding_reg_rs2!=0         #i.e rs1 is not dependent and rs2 is dependent
-                core.execution_reg = core.registers[core.rs1] $ core.data_forwarding_reg_rs2
-            else    #i.e both are dependent
-                core.execution_reg = core.data_forwarding_reg_rs1 $ core.data_forwarding_reg_rs2
-            end                    
-        else
-            core.execution_reg = core.registers[core.rs1] $ core.registers[core.rs2]
-        end
-    elseif core.present_operator=="SRL/SRA"
-        if Int(Instruction_to_decode[2])-48==0
-            #SRL operation
-            if core.data_forwarding_on
-                if core.data_forwarding_reg_rs1!=0&&core.data_forwarding_reg_rs2==0         #i.e rs1 is dependent and rs2 is not dependent
-                    core.execution_reg = core.data_forwarding_reg_rs1 >>> core.registers[core.rs2]
-                elseif core.data_forwarding_reg_rs1==0&&core.data_forwarding_reg_rs2!=0         #i.e rs1 is not dependent and rs2 is dependent
-                    core.execution_reg = core.registers[core.rs1] >>> core.data_forwarding_reg_rs2
-                else    #i.e both are dependent
-                    core.execution_reg = core.data_forwarding_reg_rs1 >>> core.data_forwarding_reg_rs2
-                end                    
-            else
-                core.execution_reg = core.registers[core.rs1] >>> core.registers[core.rs2]
-            end
-        elseif Int(Instruction_to_decode[2])-48==1
-            #SRA operation
-            if core.data_forwarding_on
-                if core.data_forwarding_reg_rs1!=0&&core.data_forwarding_reg_rs2==0         #i.e rs1 is dependent and rs2 is not dependent
-                    core.execution_reg = core.data_forwarding_reg_rs1 >> core.registers[core.rs2]
-                elseif core.data_forwarding_reg_rs1==0&&core.data_forwarding_reg_rs2!=0         #i.e rs1 is not dependent and rs2 is dependent
-                    core.execution_reg = core.registers[core.rs1] >> core.data_forwarding_reg_rs2
-                else    #i.e both are dependent
-                    core.execution_reg = core.data_forwarding_reg_rs1 >> core.data_forwarding_reg_rs2
-                end                    
-            else
-                core.execution_reg = core.registers[core.rs1] >> core.registers[core.rs2]
-            end
-        end
-    elseif core.present_operator=="OR"
-        if core.data_forwarding_on
-            if core.data_forwarding_reg_rs1!=0&&core.data_forwarding_reg_rs2==0         #i.e rs1 is dependent and rs2 is not dependent
-                core.execution_reg = core.data_forwarding_reg_rs1 | core.registers[core.rs2]
-            elseif core.data_forwarding_reg_rs1==0&&core.data_forwarding_reg_rs2!=0         #i.e rs1 is not dependent and rs2 is dependent
-                core.execution_reg = core.registers[core.rs1] | core.data_forwarding_reg_rs2
-            else    #i.e both are dependent
-                core.execution_reg = core.data_forwarding_reg_rs1 | core.data_forwarding_reg_rs2
-            end                    
-        else
-            core.execution_reg = core.registers[core.rs1] | core.registers[core.rs2]
-        end
-    elseif core.present_operator=="AND"
-        if core.data_forwarding_on
-            if core.data_forwarding_reg_rs1!=0&&core.data_forwarding_reg_rs2==0         #i.e rs1 is dependent and rs2 is not dependent
-                core.execution_reg = core.data_forwarding_reg_rs1 & core.registers[core.rs2]
-            elseif core.data_forwarding_reg_rs1==0&&core.data_forwarding_reg_rs2!=0         #i.e rs1 is not dependent and rs2 is dependent
-                core.execution_reg = core.registers[core.rs1] & core.data_forwarding_reg_rs2
-            else    #i.e both are dependent
-                core.execution_reg = core.data_forwarding_reg_rs1 & core.data_forwarding_reg_rs2
-            end                    
-        else
-            core.execution_reg = core.registers[core.rs1] & core.registers[core.rs2]
+            instruction_EX.pipeline_reg = core.registers[instruction_EX.rd + 1] + instruction_EX.immediate_value_or_offset
         end
 
-        #======================================================================
-                            Executing I Format Operations          
-        ======================================================================#
- 
-    elseif core.present_operator=="ADDI"
-        if core.data_forwarding_on
-            core.execution_reg = core.data_forwarding_reg_i + core.immediate_value_or_offset
-            # println("Came here for execution")
-        else
-            core.execution_reg = core.registers[core.rs1] + core.immediate_value_or_offset
-        end
-    elseif core.present_operator=="XORI"
-        if core.data_forwarding_on
-            core.execution_reg = core.data_forwarding_reg_i $ core.immediate_value_or_offset
-        else
-            core.execution_reg = core.registers[core.rs1] $ core.immediate_value_or_offset
-        end
-    elseif core.present_operator=="ORI"
-        if core.data_forwarding_on
-            core.execution_reg = core.data_forwarding_reg_i | core.immediate_value_or_offset
-        else
-            core.execution_reg = core.registers[core.rs1] | core.immediate_value_or_offset
-        end
-    elseif core.present_operator=="ANDI"
-        if core.data_forwarding_on
-            core.execution_reg = core.data_forwarding_reg_i & core.immediate_value_or_offset
-        else
-            core.execution_reg = core.registers[core.rs1] & core.immediate_value_or_offset
-        end
-    elseif core.present_operator=="SLLI"
-        imm_value = parse(Int,Instruction_to_decode[8:12], base=2)
-        if core.data_forwarding_on
-            core.execution_reg = core.data_forwarding_reg_i << core.immediate_value_or_offset
-        else
-            core.execution_reg = core.registers[core.rs1] << imm_value
-        end
-    elseif core.present_operator=="SRLI/SRAI"
-        imm_value = parse(Int,Instruction_to_decode[8:12], base=2)
-        if Int(Instruction_to_decode[2])-48==0
-            #SRLI operation
-            core.execution_reg = core.registers[core.rs1] >>> imm_value
-        elseif Int(Instruction_to_decode[2])-48==1
-            #SRAI operation
-            core.execution_reg = core.registers[core.rs1] >> imm_value
-        end
-
-        #======================================================================
-                            Executing L Format Operations          
-        ======================================================================#
- 
-    elseif core.present_operator=="LA"
-        core.execution_reg = parse(UInt,Instruction_to_decode[1:12], base=2)    # Storing Address
-    elseif core.present_operator=="LW"
-        offset = parse(UInt,Instruction_to_decode[1:12], base=2)
-        if core.data_forwarding_on
-            core.execution_reg = core.data_forwarding_reg_rs1 + offset
-        else
-            core.execution_reg = core.registers[core.rs1]+offset       # Storing Address
-        end   
-    elseif core.present_operator=="LS"
-        core.execution_reg = core.immediate_value_or_offset             # Storing Address
-    elseif core.present_operator=="LB"
-        if core.data_forwarding_on
-            core.execution_reg = core.data_forwarding_reg_rs1 + core.immediate_value_or_offset        # Storing Address
-        else
-            core.execution_reg = core.registers[core.rs1]+core.immediate_value_or_offset        # Storing Address
-        end
-
-        #======================================================================
-                            Executing S Format Operations          
-        ======================================================================#
- 
-    elseif core.present_operator=="SW"||core.present_operator=="SB"
-        if core.data_forwarding_on&&core.rd_dependent_on_previous_instruction
-            core.execution_reg = core.data_forwarding_reg_rd + core.immediate_value_or_offset           # Storing Address
-        else
-            core.execution_reg = core.registers[core.rd] + core.immediate_value_or_offset           # Storing Address
-        end
-    # elseif core.present_operator=="SB"
-    #     core.execution_reg = core.registers[core.rd] + core.immediate_value_or_offset                # Storing Address
-
-        #======================================================================
-                            Executing B Format Operations          
-        ======================================================================# 
-
-    elseif core.present_operator=="BEQ"
-        offset = div(bin_string_to_signed_int(Instruction_to_decode[1:12]*"0"),4)
-        rd = parse(Int,Instruction_to_decode[21:25], base=2)+1
-        rs1_value = core.registers[core.rs1]
-        rs2_value = core.registers[rd]
-        if core.rs1_dependent_on_previous_instruction&&!core.rs2_dependent_on_previous_instruction
-            rs1_value = core.execution_reg
-        elseif !core.rs1_dependent_on_previous_instruction&&core.rs2_dependent_on_previous_instruction
-            rs2_value = core.execution_reg
-        elseif core.rs1_dependent_on_previous_instruction&&core.rs2_dependent_on_previous_instruction
-            rs1_value = core.execution_reg
-            rs2_value = core.execution_reg
-        end
-        if core.rs1_dependent_on_second_previous_instruction
-            rs1_value = core.previous_mem_reg
-        end
-        if core.rs2_dependent_on_second_previous_instruction
-            rs2_value = core.previous_mem_reg
-        end
-        if rs1_value == rs2_value
-            if offset!=1
-                core.branch_taken_count+=1
-                core.branch_to_be_taken_in_next_clock= true
-                core.branch_pc = core.pc + offset - 2      #Because after IF stage we are incrementing the pc
-                # println("Instruction fetched from pc : ",core.pc)
-                core.rd = -1
-            end
-        end
-    elseif core.present_operator=="BNE"
-        offset = div(bin_string_to_signed_int(Instruction_to_decode[1:12]*"0"),4)
-        rd = parse(Int,Instruction_to_decode[21:25], base=2)+1
-        rs1_value = core.registers[core.rs1]
-        rs2_value = core.registers[rd]
-        if core.rs1_dependent_on_previous_instruction&&!core.rs2_dependent_on_previous_instruction
-            rs1_value = core.execution_reg
-        elseif !core.rs1_dependent_on_previous_instruction&&core.rs2_dependent_on_previous_instruction
-            rs2_value = core.execution_reg
-        elseif core.rs1_dependent_on_previous_instruction&&core.rs2_dependent_on_previous_instruction
-            rs1_value = core.execution_reg
-            rs2_value = core.execution_reg
-        end
-        if core.rs1_dependent_on_second_previous_instruction
-            rs1_value = core.previous_mem_reg
-        end
-        if core.rs2_dependent_on_second_previous_instruction
-            rs2_value = core.previous_mem_reg
-        end
-        if rs1_value != rs2_value
-            if offset!=1
-                core.branch_taken_count+=1
-                core.branch_to_be_taken_in_next_clock= true
-                core.branch_pc = core.pc + offset - 2        #Because after IF stage we are incrementing the pc
-                # println("Instruction fetched from pc : ",core.pc)
-                core.rd = -1
-            end
-        end
-    elseif core.present_operator=="BLT"
-        offset = div(bin_string_to_signed_int(Instruction_to_decode[1:12]*"0"),4)
-        rd = parse(Int,Instruction_to_decode[21:25], base=2)+1
-        rs1_value = core.registers[core.rs1]
-        rs2_value = core.registers[rd]
-        if core.rs1_dependent_on_previous_instruction&&!core.rs2_dependent_on_previous_instruction
-            rs1_value = core.execution_reg
-        elseif !core.rs1_dependent_on_previous_instruction&&core.rs2_dependent_on_previous_instruction
-            rs2_value = core.execution_reg
-        elseif core.rs1_dependent_on_previous_instruction&&core.rs2_dependent_on_previous_instruction
-            rs1_value = core.execution_reg
-            rs2_value = core.execution_reg
-        end
-        if core.rs1_dependent_on_second_previous_instruction
-            rs1_value = core.previous_mem_reg
-        end
-        if core.rs2_dependent_on_second_previous_instruction
-            rs2_value = core.previous_mem_reg
-        end
-        if rs1_value < rs2_value
-            if offset!=1
-                core.branch_taken_count+=1
-                core.branch_to_be_taken_in_next_clock= true
-                core.branch_pc = core.pc + offset - 2      #Because after IF stage we are incrementing the pc
-                # println("Instruction fetched from pc : ",core.pc)
-                core.rd = - 1
-            elseif offset==1
-                core.branch_not_taken_count+=1
-            end
-        end
-    elseif core.present_operator=="BGE"
-        offset = div(bin_string_to_signed_int(Instruction_to_decode[1:12]*"0"),4)
-        rd = parse(Int,Instruction_to_decode[21:25], base=2)+1
-        rs1_value = core.registers[core.rs1]
-        rs2_value = core.registers[rd]
-        if core.rs1_dependent_on_previous_instruction&&!core.rs2_dependent_on_previous_instruction
-            rs1_value = core.execution_reg
-        elseif !core.rs1_dependent_on_previous_instruction&&core.rs2_dependent_on_previous_instruction
-            rs2_value = core.execution_reg
-        elseif core.rs1_dependent_on_previous_instruction&&core.rs2_dependent_on_previous_instruction
-            rs1_value = core.execution_reg
-            rs2_value = core.execution_reg
-        end
-        if core.rs1_dependent_on_second_previous_instruction
-            rs1_value = core.previous_mem_reg
-        end
-        if core.rs2_dependent_on_second_previous_instruction
-            rs2_value = core.previous_mem_reg
-        end
-        if rs1_value >= rs2_value
-            if offset!=1
-                core.branch_taken_count+=1
-                core.branch_to_be_taken_in_next_clock= true
-                core.branch_pc = core.pc + offset - 2      #Because after IF stage we are incrementing the pc
-                # println("Instruction fetched from pc : ",core.pc)
-                core.rd = -1
-            end
-        end
-
-
-        #======================================================================
-                            Executing JAL Format Operations          
-        ======================================================================# 
-
-    elseif core.present_operator=="JAL"
-        # core.registers[core.rd] = core.pc + 1     To be done in WB stage
-        core.execution_reg = core.pc      #Because after IF stage we are incrementing the pc
-        offset = bin_string_to_signed_int(Instruction_to_decode[1:20])
+    #======================================================================
+                        Executing JUMP Format Operations          
+    ======================================================================#
+    
+    elseif instruction_EX.operator == "JAL"
+        instruction_EX.pipeline_reg = core.pc           #Because after IF stage we are incrementing the pc
+        offset = bin_string_to_signed_int(instruction_EX.Four_byte_instruction[1:20])
         core.pc = core.pc + offset  - 1
-        #println("Instruction Fetched = ",core.pc)
 
-        #======================================================================
-                            Executing JALR Format Operations          
-        ======================================================================# 
-
-    elseif instruction_type=="JALR"
-        #core.registers[core.rd] = core.pc + 1 To be done in WB stage
-        core.execution_reg = core.pc      #Because after IF stage we are incrementing the pc
-        core.pc = core.registers[core.rs1] + core.immediate_value_or_offset
+    #======================================================================
+                        Executing Branch Format Operations          
+    ======================================================================# 
+    elseif instruction_EX.operator == "BEQ"
+        condition = false
+        if core.data_forwarding && core.branch_dependency && rd_dependent
+            core.branch_dependency = false
+            rd_dependent = false
+            if instruction_EX.source_reg[1] == instruction_EX.rd 
+                condition = true
+            end
+        else
+            if instruction_EX.source_reg[1] == core.registers[instruction_EX.rd+1] 
+                condition = true
+            end
+        end
+        if condition      #Branch actually taken
+            updatePrediction(true,core)
+            if !core.branch_taken       #But prediction is not taken
+                offset = div(bin_string_to_signed_int(core.instruction_EX.Four_byte_instruction[1:12]*"0"),4)
+                core.pc = core.pc + offset - 2
+                core.instruction_IF.stall_due_to_branch = true
+                core.instruction_ID_RF.stall_due_to_branch = true
+                core.stall_count+=2
+            else    #Correct prediction
+                core.branch_correct_predict_count+=1
+            end
+        else         #Branch actually not taken
+            updatePrediction(false,core)
+            if core.branch_taken        #But prediction is taken
+                core.pc = core.branch_pc + 1
+                core.instruction_IF.stall_due_to_branch = true
+                core.stall_count+=1
+            else    #Correct prediction
+                core.branch_correct_predict_count+=1
+            end
+        end
+    elseif instruction_EX.operator == "BNE"
+        condition = false
+        if core.data_forwarding && core.branch_dependency && rd_dependent
+            core.branch_dependency = false
+            rd_dependent = false
+            if instruction_EX.source_reg[1] != instruction_EX.rd 
+                condition = true
+            end
+        else
+            if instruction_EX.source_reg[1] != core.registers[instruction_EX.rd+1] 
+                condition = true
+            end
+        end
+        if condition      #Branch actually taken
+            updatePrediction(true,core)
+            if !core.branch_taken       #But prediction is not taken
+                offset = div(bin_string_to_signed_int(core.instruction_EX.Four_byte_instruction[1:12]*"0"),4)
+                core.pc = core.pc + offset - 2
+                core.instruction_IF.stall_due_to_branch = true
+                core.instruction_ID_RF.stall_due_to_branch = true
+                core.stall_count+=2
+            else    #Correct prediction
+                core.branch_correct_predict_count+=1
+            end
+        else         #Branch actually not taken
+            updatePrediction(false,core)
+            if core.branch_taken        #But prediction is taken
+                core.pc = core.branch_pc + 1
+                core.instruction_IF.stall_due_to_branch = true
+                core.stall_count+=1
+            else    #Correct prediction
+                core.branch_correct_predict_count+=1
+            end
+        end
+    elseif instruction_EX.operator == "BLT"
+        condition = false
+        if core.data_forwarding && core.branch_dependency && rd_dependent
+            core.branch_dependency = false
+            rd_dependent = false
+            if instruction_EX.source_reg[1] < instruction_EX.rd 
+                # println("Dependent ",instruction_EX.rs1," = ",instruction_EX.source_reg[1]," instruction_EX.rd  = ",instruction_EX.rd)
+                condition = true
+            end
+        else
+            if instruction_EX.source_reg[1] < core.registers[instruction_EX.rd+1] 
+                # println("Not Dependent ",instruction_EX.rs1," ",instruction_EX.rd)
+                condition = true
+            end
+        end
+        if condition      #Branch actually taken
+            updatePrediction(true,core)
+            if !core.branch_taken       #But prediction is not taken
+                offset = div(bin_string_to_signed_int(core.instruction_EX.Four_byte_instruction[1:12]*"0"),4)
+                core.pc = core.pc + offset - 2
+                core.instruction_IF.stall_due_to_branch = true
+                core.instruction_ID_RF.stall_due_to_branch = true
+                core.stall_count+=2
+            else    #Correct prediction
+                core.branch_correct_predict_count+=1
+            end
+        else         #Branch actually not taken
+            updatePrediction(false,core)
+            if core.branch_taken        #But prediction is taken
+                core.pc = core.branch_pc + 1
+                core.instruction_IF.stall_due_to_branch = true
+                core.stall_count+=1
+            else    #Correct prediction
+                core.branch_correct_predict_count+=1
+            end
+        end
+    elseif instruction_EX.operator == "BGE"
+        condition = false
+        if core.data_forwarding && core.branch_dependency && rd_dependent
+            core.branch_dependency = false
+            rd_dependent = false
+            if instruction_EX.source_reg[1] >= instruction_EX.rd 
+                condition = true
+            end
+        else
+            if instruction_EX.source_reg[1] >= core.registers[instruction_EX.rd+1] 
+                condition = true
+            end
+        end
+        if condition      #Branch actually taken
+            updatePrediction(true,core)
+            if !core.branch_taken       #But prediction is not taken
+                offset = div(bin_string_to_signed_int(core.instruction_EX.Four_byte_instruction[1:12]*"0"),4)
+                core.pc = core.pc + offset - 2
+                core.instruction_IF.stall_due_to_branch = true
+                core.instruction_ID_RF.stall_due_to_branch = true
+                core.stall_count+=2
+            else    #Correct prediction
+                core.branch_correct_predict_count+=1
+            end
+        else         #Branch actually not taken
+            updatePrediction(false,core)
+            if core.branch_taken        #But prediction is taken
+                core.pc = core.branch_pc + 1
+                core.instruction_IF.stall_due_to_branch = true
+                core.stall_count+=1
+            else    #Correct prediction
+                core.branch_correct_predict_count+=1
+            end
+        end
     end
-    core.rs1-=1
-    core.rs2-=1
-    core.rd-=1
-    core.data_forwarding_reg_i = 0
-    if !core.data_forwarding_for_Store_rs
-        core.data_forwarding_reg_rs1 = 0
-    end
-    core.data_forwarding_reg_rs2 = 0
-    core.data_forwarding_on = false
-    core.rs1_dependent_on_previous_instruction = false
-    core.rs2_dependent_on_previous_instruction = false
-    core.rd_dependent_on_previous_instruction = false
-    core.rs1_dependent_on_second_previous_instruction = false
-    core.rs2_dependent_on_second_previous_instruction = false
- end
- 
+end

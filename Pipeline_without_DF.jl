@@ -4,132 +4,76 @@ include("Execute_Operation.jl")
                                                Run Function
 ===========================================================================================================#
 
-function run_without_DF(processor::Processor)
-    while !processor.cores[1].writeBack_of_last_instruction&&!processor.cores[2].writeBack_of_last_instruction
-        processor.clock+=1
-        for i in 1:2
-            processor.cores[i].clock+=1
-            if processor.cores[i].stall_in_present_clock
-                # println("Stall Present at clock : ",processor.clock)
-                processor.cores[i].stall_count+=1
-            end 
-            writeBack(processor.cores[i],processor)
-            memory_access(processor.cores[i],processor)
-            execute(processor.cores[i],processor)
-            instructionDecode_RegisterFetch(processor.cores[i],processor)
-            instruction_Fetch(processor.cores[i],processor)
-        end
-    end
-    while !processor.cores[1].writeBack_of_last_instruction
+function run_without_df(processor::Processor)
+    println("Running without DF")
+    while !processor.cores[1].write_back_of_last_instruction_done
         processor.clock+=1
         processor.cores[1].clock+=1
-        if processor.cores[1].stall_in_present_clock
-            # println("Stall Present at clock : ",processor.clock)
-            processor.cores[1].stall_count+=1
-        end 
-        writeBack(processor.cores[1],processor)
-        memory_access(processor.cores[1],processor)
-        execute(processor.cores[1],processor)
-        instructionDecode_RegisterFetch(processor.cores[1],processor)
-        instruction_Fetch(processor.cores[1],processor)
-    end
-    while !processor.cores[2].writeBack_of_last_instruction
-        processor.clock+=1
-        processor.cores[2].clock+=1
-        if processor.cores[2].stall_in_present_clock
-            # println("Stall Present at clock : ",processor.clock)
-            processor.cores[2].stall_count+=1
-        end 
-        writeBack(processor.cores[2],processor)
-        memory_access(processor.cores[2],processor)
-        execute(processor.cores[2],processor)
-        instructionDecode_RegisterFetch(processor.cores[2],processor)
-        instruction_Fetch(processor.cores[2],processor)
-    end
-    for i in 1:2
-        if processor.cores[i].present_operator=="ADDI"
-            if processor.cores[i].addi_variable_latency>1
-                processor.cores[i].stall_count-=(processor.cores[i].addi_variable_latency-1)
-            end
-        elseif processor.cores[i].present_operator=="ADD/SUB"
-            if processor.cores[i].add_variable_latency>1
-                processor.cores[i].stall_count-=(processor.cores[i].add_variable_latency-1)
-            end
-            if processor.cores[i].sub_variable_latency>1
-                processor.cores[i].stall_count-=(processor.cores[i].sub_variable_latency-1)
-            end
-        end
+        # println("\n",processor.cores[1].clock)
+        operation_writeBack_without_df(    processor.cores[1],  processor.cores[1].instruction_WriteBack,  processor.cores[1].instruction_MEM)
+        operation_memory_access_without_df(processor.cores[1],  processor.cores[1].instruction_MEM,        processor.cores[1].instruction_EX, processor)
+        operation_execute_without_df(      processor.cores[1],  processor.cores[1].instruction_EX,         processor.cores[1].instruction_ID_RF)
+        operation_instructionDecode_RegisterFetch_without_df(processor.cores[1] ,processor.cores[1].instruction_ID_RF)
+        operation_instruction_Fetch_without_df(processor.cores[1],processor.cores[1].instruction_IF, processor)
+        operation_stall_manager_without_df(processor.cores[1])
+        processor.cores[1].registers[1] = 0
     end
 end
 
 #==========================================================================================================
                                             Write Back
 ===========================================================================================================#
-
-function writeBack(core::Core_Object,processor::Processor)
-    core.instruction_reg_after_Write_Back = Instruction_to_decode = core.instruction_reg_after_Memory_Access
-    if Instruction_to_decode!="uninitialized"
-        # println("Instruction Write Back at clock : ",processor.clock)
-        core.instruction_count+=1
-        rd = parse(Int,Instruction_to_decode[21:25], base=2) + 1
-        opcode = Instruction_to_decode[26:32]
-        func3 = Instruction_to_decode[18:20]
-        operator = get_instruction(opcode, func3)
-        if any(value ->operator  in values(value), values(operator_dict_RI))
-            core.registers[rd] = core.mem_reg
-        elseif operator=="LA"||operator=="LW"||operator=="LB"||operator=="JAL"||operator=="JALR"
-            core.registers[rd] = core.mem_reg
-        end
-        core.writeBack_of_last_instruction = true
-        core.writeBack_of_second_last_instruction = true
+function operation_writeBack_without_df(core::Core_Object,instruction_WriteBack::Instruction,instruction_MEM::Instruction)
+    copy_properties!(instruction_WriteBack,instruction_MEM)
+    if instruction_WriteBack.stall_present
+        return
     end
-    core.registers[1]=0
+    if instruction_WriteBack.Four_byte_instruction!="uninitialized"
+        core.instruction_count+=1
+        if instruction_WriteBack.operator != "BEQ" && instruction_WriteBack.operator != "BNE" && instruction_WriteBack.operator != "BGE" && instruction_WriteBack.operator != "BLT" && instruction_WriteBack.operator != "SW" && instruction_WriteBack.operator != "SB"
+            core.registers[instruction_WriteBack.rd+1] = instruction_WriteBack.pipeline_reg
+        end
+        # println("WB")
+        core.write_back_of_last_instruction_done = true
+        core.write_back_of_second_last_instruction_done = true
+    end
 end
-
 #==========================================================================================================
                                                   Mem
 ===========================================================================================================#
 
-function memory_access(core::Core_Object,processor::Processor)
-    memory = processor.memory
-    if core.variable_latency_actual_count != core.variable_latency_count
-        core.instruction_reg_after_Memory_Access="uninitialized"
+function operation_memory_access_without_df(core::Core_Object,instruction_MEM::Instruction,instruction_EX::Instruction,processor::Processor)
+    copy_properties!(instruction_MEM, instruction_EX)
+    if instruction_MEM.stall_present
+        core.instruction_WriteBack.stall_present = true
         return
     end
-    core.instruction_reg_after_Memory_Access = Instruction_to_decode = core.instruction_reg_after_Execution
-    if core.instruction_reg_after_Memory_Access!="uninitialized"
-        # println("Instruction Memory Access at clock : ",processor.clock)
-        rs1 = parse(Int,Instruction_to_decode[13:17], base=2) + 1
-        opcode = Instruction_to_decode[26:32]
-        func3 = Instruction_to_decode[18:20]
-        operator = get_instruction(opcode, func3)
+    if instruction_MEM.Four_byte_instruction!="uninitialized"
+        # println("MEM")
 
-        core.mem_reg = address = core.execution_reg
-        if operator == "LW"
-            core.mem_reg = return_word_from_memory_littleEndian(memory,address)
-        elseif operator=="LA"
-            core.mem_reg = core.execution_reg
-        elseif operator == "LB"
+        #--------------------------------------------------------------------------------------------#
+        memory = processor.memory
+        address = instruction_EX.pipeline_reg
+        if instruction_MEM.operator == "LW"
+            instruction_MEM.pipeline_reg = return_word_from_memory_littleEndian(memory,address)
+        elseif instruction_MEM.operator == "LB"
             row,col = address_to_row_col(address)
-            core.mem_reg = memory[row,col]
-        elseif operator=="SW"
+            instruction_MEM.pipeline_reg = memory[row,col]
+        elseif instruction_MEM.operator=="SW"
             row,col = address_to_row_col(address)
-            bin = int_to_32bit_bin(core.registers[rs1])
+            bin = int_to_32bit_bin(core.registers[instruction_MEM.rs1+1])
             in_memory_place_word(memory,row,col,bin)
-        elseif operator == "SB"
-            address = core.execution_reg
-            row,col = address_to_row_col(address)
-            memory[row,col] = core.registers[rs1]
         end
-        core.writeBack_of_last_instruction = false
-        core.registers[1]=0
-        if core.writeBack_of_second_last_instruction
-            return
-        end
-        if core.instruction_reg_after_Write_Back!="uninitialized"
-            core.writeBack_of_second_last_instruction = true
+        #--------------------------------------------------------------------------------------------#
+
+        core.write_back_of_last_instruction_done = false
+        if (core.instruction_WriteBack.Four_byte_instruction != "uninitialized")
+            core.write_back_of_second_last_instruction_done = true
         else
-            core.writeBack_of_second_last_instruction = false
+            core.write_back_of_second_last_instruction_done = false
+        end
+        if core.instruction_IF.Four_byte_instruction != "uninitialized"
+            core.write_back_of_second_last_instruction_done = false
         end
     end
 end
@@ -138,228 +82,207 @@ end
                                                   Ex
 ===========================================================================================================#
 
-function execute(core::Core_Object,processor::Processor)
-    if core.variable_latency_count>1
-        core.writeBack_of_last_instruction = false
-        core.variable_latency_count-=1
+function operation_execute_without_df(core::Core_Object,instruction_EX::Instruction,instruction_ID_RF::Instruction)
+    copy_properties!(instruction_EX,instruction_ID_RF)
+    if instruction_EX.stall_present
         core.stall_count+=1
+        core.instruction_MEM.stall_present = true
+        instruction_EX.Four_byte_instruction="uninitialized"
         return
     end
-    if core.variable_latency_count==1
-        core.variable_latency_present_clock = false
-        core.variable_latency_actual_count =1
+    if instruction_EX.Four_byte_instruction!="uninitialized"
+        Execute_Operation(core,instruction_EX)
+        core.write_back_of_last_instruction_done = false
+        # println("EX")
     end
-    if core.branch_to_be_taken_in_present_clock
-        core.instruction_reg_after_Execution = "uninitialized"
-        return
-    end
-    if core.stall_in_present_clock||core.stall_at_execution
-        core.instruction_reg_after_Execution = "uninitialized"
-        return
-    end
-    core.instruction_reg_after_Execution = core.instruction_reg_after_ID_RF
-    if core.instruction_reg_after_Execution!="uninitialized"
-        # println("Instruction Executed at clock : ",processor.clock)
-        Execute_Operation(core) 
-        core.writeBack_of_last_instruction = false
-    end
-    core.registers[1]=0
 end
 
 #==========================================================================================================
                                                 ID / RF
 ===========================================================================================================#
 
-function instructionDecode_RegisterFetch(core::Core_Object,processor::Processor)
-    if core.stall_in_present_clock||core.variable_latency_present_clock
+function operation_instructionDecode_RegisterFetch_without_df(core::Core_Object,instruction::Instruction)
+    if instruction.stall_due_to_branch
+        instruction.stall_due_to_branch = false
+        instruction.Four_byte_instruction = "uninitialized"
+        return 
+    end
+    if instruction.stall_present
         return
     end
-    core.instruction_reg_after_ID_RF = Instruction_to_decode = core.instruction_reg_after_IF
-    if core.instruction_reg_after_ID_RF!="uninitialized"
-        
+    instruction.Four_byte_instruction = Instruction_to_decode = core.instruction_IF.Four_byte_instruction
+    if Instruction_to_decode!="uninitialized"
+        #Instuction decode
+        instruction.rs1 = parse(Int,Instruction_to_decode[13:17], base=2)
+        instruction.rs2 = parse(Int,Instruction_to_decode[8:12], base=2)
+        instruction.rd = parse(Int,Instruction_to_decode[21:25], base=2)
+        instruction.immediate_value_or_offset = bin_string_to_signed_int(Instruction_to_decode[1:12])
 
-        # Register Fetch
-        core.rs2 = parse(Int,Instruction_to_decode[8:12], base=2)
-        core.rs1 = parse(Int,Instruction_to_decode[13:17], base=2)
-        rd = parse(Int,Instruction_to_decode[21:25], base=2)
-        
-        core.immediate_value_or_offset = bin_string_to_signed_int(Instruction_to_decode[1:12])
-        core.second_previous_operator = core.previous_operator
-        core.previous_operator = core.present_operator
-        #Instruction Decode
+        #Operator Decode
         opcode = Instruction_to_decode[26:32]
         func3 = Instruction_to_decode[18:20]
-        core.present_operator = get_instruction(opcode, func3)
+        instruction.operator = get_instruction(opcode, func3)
 
-        # println("Instruction Decoded at clock : ",processor.clock," operator = ",core.present_operator," rs1 = ",core.rs1," rs2 = ",core.rs2," rd = ",rd," core.rd = ",core.rd," core.writeBack_of_last_instruction = ",core.writeBack_of_last_instruction)
-        if opcode=="0010011"    # I Format Instructions
-            if core.branch_to_be_taken_in_next_clock
-                return
-            end
-            if core.present_operator == "ADDI"
-                if core.addi_variable_latency>1
-                    core.variable_latency_next_clock = true
-                    core.variable_latency_actual_count = core.addi_variable_latency
-                    core.variable_latency_count = core.addi_variable_latency
-                end
-            end
-            if !core.variable_latency_next_clock
-                if core.rs1==core.rd&&(core.previous_operator!="BEQ"&&core.previous_operator!="BNE"&&core.previous_operator!="BLT"&&core.previous_operator!="BGE")
-                    if !core.writeBack_of_last_instruction
-                        core.stall_in_next_clock = true
-                    end
-                elseif (core.rs1 == core.rd_second_before)&&(core.second_previous_operator!="BEQ"&&core.second_previous_operator!="BNE"&&core.second_previous_operator!="BLT"&&core.second_previous_operator!="BGE"&&core.second_previous_operator!="SW")
-                    if !core.writeBack_of_second_last_instruction
-                        core.stall_at_execution = true
-                        core.stall_in_next_clock = true
-                    end
-                end
-            end
-        elseif opcode=="1101111"||opcode=="1100111"  #JAL Format Instructions
-            core.rd_second_before = core.rd
-            core.rd = -1
-            core.stall_due_to_jump = true
-            return
-
-        elseif opcode!="1100011"        #Checking It is not a branch Statement
-            if core.branch_to_be_taken_in_next_clock
-                return
-            end
-            #ADD
-            if core.present_operator == "ADD/SUB"&&Int(Instruction_to_decode[2])-48==0         
-                if core.add_variable_latency>1
-                    core.variable_latency_next_clock = true
-                    core.variable_latency_actual_count = core.add_variable_latency
-                    core.variable_latency_count = core.add_variable_latency
-                end
-            #SUB
-            elseif core.present_operator == "ADD/SUB"&&Int(Instruction_to_decode[2])-48==1
-                if core.sub_variable_latency>1
-                    core.variable_latency_next_clock = true
-                    core.variable_latency_actual_count = core.sub_variable_latency
-                    core.variable_latency_count = core.sub_variable_latency
-                end
-            end
-            if !core.variable_latency_next_clock
-                #Checking Data Dependency on one instruction before
-                if (core.rs2==core.rd||core.rs1==core.rd)&&(core.previous_operator!="BEQ"&&core.previous_operator!="BNE"&&core.previous_operator!="BLT"&&core.previous_operator!="BGE")
-                    if !core.writeBack_of_last_instruction
-                        core.stall_in_next_clock = true
-                    end
-                #Checking Data Dependency on one more instruction before
-                elseif (core.rs1==core.rd_second_before || core.rs2==core.rd_second_before)&&(core.second_previous_operator!="BEQ"&&core.second_previous_operator!="BNE"&&core.second_previous_operator!="BLT"&&core.second_previous_operator!="BGE"&&core.second_previous_operator!="SW")
-                    if !core.writeBack_of_second_last_instruction
-                        core.stall_at_execution = true
-                        core.stall_in_next_clock = true
-                    end
-                end
-            end
-
-        elseif opcode=="1100011"    #Checking It is a branch Instruction
-            core.branch_count+=1
-            #In Branch instructions Data is Dependent on last instruction 
-
-            if (core.rs1==core.rd||rd==core.rd)&&(core.previous_operator!="BEQ"&&core.previous_operator!="BNE"&&core.previous_operator!="BLT"&&core.previous_operator!="BGE")
-                    core.stall_in_next_clock = true
-                    core.writeBack_of_last_instruction = false       
-                    # Even If dependency , the instruction shall be fetched bcz our static predictor is always branch not taken
-                    core.rd_second_before = core.rd
-                    core.rd=rd
-                    return
-            end
-
-            #Checking Data Dependency on second last instruction 
-            if (core.rs1==core.rd_second_before || rd==core.rd_second_before)&&(core.second_previous_operator!="BEQ"&&core.second_previous_operator!="BNE"&&core.second_previous_operator!="BLT"&&core.second_previous_operator!="BGE")
-                if !core.writeBack_of_second_last_instruction
-                    core.stall_at_execution = true
-                    core.stall_in_next_clock = true
-                end
-                return
-            end
+        # Register Fetch
+        if instruction.rs1!=0&&instruction.rs2!=0
+            instruction.source_reg[1] = core.registers[instruction.rs1+1]
+            instruction.source_reg[2] = core.registers[instruction.rs2+1]
         end
-        core.writeBack_of_last_instruction = false
-        core.rd_second_before = core.rd
-        core.rd=rd
-    end
-    core.registers[1]=0
-end
+        core.write_back_of_last_instruction_done = false
 
+        #For Jump statements no need to check for dependency
+        if (opcode == "1101111") || (opcode == "1100111")                              #Jump Statements
+            core.stall_due_to_jump = true
+            core.instruction_IF.stall_due_to_jump = true
+
+        #For Branch Statements we are first predicting and then checking for dependency
+        #Priority is dependency and then prediction
+        elseif (opcode == "1100011")          #Branch Statements
+            core.branch_count+=1
+            core.branch_taken = predict(core)
+            core.branch_pc = core.pc - 1
+            if (core.branch_taken) && (instruction.immediate_value_or_offset != 1)           # i.e. branch is taken
+                core.instruction_IF.stall_due_to_branch = true
+                offset = div(bin_string_to_signed_int(instruction.Four_byte_instruction[1:12]*"0"),4)
+                core.pc = offset + core.pc - 1
+                core.stall_count+=1
+            #Branch not taken ,no need to consider
+            end
+            #Checking dependency
+            previous_instruction = core.instruction_EX
+            second_previous_instruction = core.instruction_MEM
+            check_Dependency_without_df(opcode,instruction,previous_instruction,second_previous_instruction,core)
+        else
+            #Checking dependency
+            previous_instruction = core.instruction_EX
+            second_previous_instruction = core.instruction_MEM
+            check_Dependency_without_df(opcode,instruction,previous_instruction,second_previous_instruction,core)
+        end
+        # println("ID/RF")
+    end
+end
 
 #==========================================================================================================
                                                  IF
 ===========================================================================================================#
 
-function instruction_Fetch(core::Core_Object,processor::Processor)
+function operation_instruction_Fetch_without_df(core::Core_Object,instruction::Instruction,processor::Processor)
+    if instruction.stall_present
+        return
+    end
+    #Stall in next clock due to data dependency
+    if (core.instruction_ID_RF.stall_present) && (!core.stall_due_to_jump)
+        instruction.stall_present = true
+    end
+    if instruction.stall_due_to_branch
+        instruction.stall_due_to_branch = false
+        instruction.Four_byte_instruction = "uninitialized"
+        return
+    end
+    if instruction.stall_due_to_jump
+        instruction.stall_due_to_jump = false
+        instruction.Four_byte_instruction = "uninitialized"
+        return
+    end
     memory = processor.memory
-    if core.variable_latency_present_clock
-        return
-    end
-    if core.variable_latency_next_clock
-        core.variable_latency_next_clock = false
-        core.variable_latency_present_clock = true
-    end
-    if core.stall_due_to_jump
-        core.stall_due_to_jump = false
-        core.stall_count+=1
-        core.instruction_reg_after_IF = "uninitialized"
-        #println(core.pc)
-        return
-    end
-    if core.stall_at_instruction_fetch 
-        core.instruction_reg_after_IF = "uninitialized"
-        core.stall_at_instruction_fetch = false
-        core.stall_count+=1
-        #println("Stall due to branch statment at clock : ",processor.clock)
-        if core.stall_in_next_clock
-            core.stall_in_present_clock = true
-            core.stall_in_next_clock = false
-        end
-        return
-    end
-    if core.stall_at_execution
-        if core.writeBack_of_second_last_instruction
-            core.stall_at_execution = false
-            core.stall_in_present_clock = false
-            return 
-        end
-    end
-    if core.stall_in_present_clock
-        if core.writeBack_of_last_instruction
-            core.stall_in_present_clock = false
-            core.writeBack_of_last_instruction = false
-            core.writeBack_of_second_last_instruction = true
-        else
-            core.stall_in_present_clock = true
-        end
-        return
-    end
-    limit=0
-    if core.id==1
-        limit = length(core.program)
-    elseif core.id==2
-        limit = length(processor.cores[1].program)+length(processor.cores[2].program)
-    end
-    if core.pc<=limit||core.branch_to_be_taken_in_present_clock
-        if core.branch_to_be_taken_in_present_clock
-            core.branch_to_be_taken_in_present_clock = false
-            core.stall_count+=2
-            core.instruction_reg_after_ID_RF = "uninitialized"
-            core.pc = core.branch_pc
-        end
-        # println("Instruction fetch at clock : ",processor.clock," pc = ",core.pc)
-        core.instruction_reg_after_IF = int_to_8bit_bin(memory[core.pc,4])*int_to_8bit_bin(memory[core.pc,3])*int_to_8bit_bin(memory[core.pc,2])*int_to_8bit_bin(memory[core.pc,1])
-        core.writeBack_of_last_instruction = false
+    if core.pc<=length(core.program)
+        instruction.Four_byte_instruction = int_to_8bit_bin(memory[core.pc,4])*int_to_8bit_bin(memory[core.pc,3])*int_to_8bit_bin(memory[core.pc,2])*int_to_8bit_bin(memory[core.pc,1])
+        core.write_back_of_last_instruction_done = false
+        # println("IF")
         core.pc+=1
     else
-        core.instruction_reg_after_IF = "uninitialized"
+        instruction.Four_byte_instruction = "uninitialized"
     end
-    core.registers[1]=0
-    if core.stall_in_next_clock
-        core.stall_in_present_clock = true
-        core.stall_in_next_clock = false
+end 
+
+#==========================================================================================================
+                                                Stall Manager
+===========================================================================================================#
+
+function operation_stall_manager_without_df(core::Core_Object)
+    #Terminating the stall
+    if ((core.write_back_of_last_instruction_done)&&(core.stall_present_due_to_data_depend_previous_inst))||((core.write_back_of_second_last_instruction_done)&&(core.stall_present_due_to_data_depend_second_previous_inst))
+        if core.stall_present_due_to_data_depend_previous_inst
+            core.stall_present_due_to_data_depend_previous_inst = false
+        elseif core.stall_present_due_to_data_depend_second_previous_inst
+            core.stall_present_due_to_data_depend_second_previous_inst = false
+        end
+        core.instruction_IF.stall_present = false
+        core.instruction_ID_RF.stall_present = false
+        core.instruction_EX.stall_present = false
+        core.instruction_MEM.stall_present = false
+        core.instruction_WriteBack.stall_present = false
+        core.write_back_of_last_instruction_done = false
     end
-    if core.branch_to_be_taken_in_next_clock #Branch to be taken in next clock
-        core.branch_to_be_taken_in_present_clock = true
-        core.branch_to_be_taken_in_next_clock = false
+
+    if core.stall_due_to_jump 
+        core.stall_count += 1
+        core.stall_due_to_jump = false
+    end
+
+end
+
+#==========================================================================================================
+                                            Dependency Checker
+===========================================================================================================#
+
+function check_Dependency_without_df(opcode, instruction::Instruction, previous_instruction::Instruction, second_previous_instruction::Instruction, core::Core_Object)
+    # ( Data Hazard on previous instruction )
+    #--------------------------------------------------------------------------------------------#
+    if opcode == "0110011"          # R Format Instructions
+        if ( (instruction.rs1 == previous_instruction.rd || instruction.rs2 == previous_instruction.rd) ) && previous_instruction_checker(previous_instruction)
+            core.stall_present_due_to_data_depend_previous_inst = true
+        elseif ( (instruction.rs1 == second_previous_instruction.rd || instruction.rs2 == second_previous_instruction.rd) ) && second_previous_instruction_checker(core,second_previous_instruction)
+            core.stall_present_due_to_data_depend_second_previous_inst = true
+        end
+    #--------------------------------------------------------------------------------------------#
+    elseif opcode == "0010011" || opcode == "0000011"     # I & L Format Instructions
+        if opcode =="0010011"
+            # println("instruction.rs1 = ",instruction.rs1," previous_instruction.rd = ",previous_instruction.rd," second_previous_instruction.rd = ",second_previous_instruction.rd)
+            # println(core.write_back_of_second_last_instruction_done)
+        end
+        if (instruction.rs1==previous_instruction.rd) && previous_instruction_checker(previous_instruction)
+            core.stall_present_due_to_data_depend_previous_inst = true
+        elseif (instruction.rs1==second_previous_instruction.rd) && second_previous_instruction_checker(core,second_previous_instruction)
+            core.stall_present_due_to_data_depend_second_previous_inst = true
+        end
+    #--------------------------------------------------------------------------------------------#
+    elseif opcode == "0100011" || opcode == "1100011"     # S & B Format Instructions
+        if ( (instruction.rs1 == previous_instruction.rd) || (instruction.rd == previous_instruction.rd) ) && previous_instruction_checker(previous_instruction)
+            core.stall_present_due_to_data_depend_previous_inst = true
+        elseif ( (instruction.rs1 == second_previous_instruction.rd) || (instruction.rd == second_previous_instruction.rd) ) && second_previous_instruction_checker(core,second_previous_instruction)
+            core.stall_present_due_to_data_depend_second_previous_inst = true
+        end
+    end
+    #--------------------------------------------------------------------------------------------#
+
+    if (core.stall_present_due_to_data_depend_previous_inst) || (core.stall_present_due_to_data_depend_second_previous_inst)
+        core.instruction_EX.stall_present = true
+        core.instruction_ID_RF.stall_present = true
+    end
+end
+
+function previous_instruction_checker(previous_instruction)
+    if (previous_instruction.rd!=0) && ( previous_instruction.operator!="BEQ" && previous_instruction.operator!="BNE" && previous_instruction.operator!="BLT" && previous_instruction.operator!="BGE" && previous_instruction.operator!="SW" && previous_instruction.operator!="SB" )
+        return true
+    end
+    return false
+end
+
+function second_previous_instruction_checker(core::Core_Object,second_previous_instruction)
+    if (second_previous_instruction.rd!=0) && (!core.write_back_of_second_last_instruction_done) && ( second_previous_instruction.operator!="BEQ" && second_previous_instruction.operator!="BNE" && second_previous_instruction.operator!="BLT" && second_previous_instruction.operator!="BGE" && second_previous_instruction.operator!="SW" && second_previous_instruction.operator!="SB" )
+        return true
+    end
+    return false
+end
+#==========================================================================================================
+                                            Branch Predictor
+===========================================================================================================#
+
+function predict(core::Core_Object)
+    if ( core.branch_predict_bit_1 && core.branch_predict_bit_2 ) || ( core.branch_predict_bit_1 && !core.branch_predict_bit_2 ) 
+        return true
+    elseif ( !core.branch_predict_bit_1 && !core.branch_predict_bit_2 ) || ( !core.branch_predict_bit_1 && core.branch_predict_bit_2 ) 
+        return false
     end
 end

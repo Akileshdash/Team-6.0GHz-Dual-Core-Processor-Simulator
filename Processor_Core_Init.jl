@@ -1,6 +1,54 @@
 
 #==========================================================================================================
-                                        Processor Initializing
+                                        Instruction Object
+===========================================================================================================#
+
+mutable struct Instruction
+    Four_byte_instruction::String
+    source_reg::Array{Int, 1}    # For Storing the contents of source registers
+    rs1::Int
+    rs2::Int
+    rd::Int
+    immediate_value_or_offset::Int
+    operator::String
+    pipeline_reg::Int
+    stall_present::Bool
+    stall_due_to_jump::Bool
+    stall_due_to_branch::Bool
+    stall_due_to_load::Bool
+end
+
+function instruction_Init()
+    Four_byte_instruction="uninitialized"
+    source_reg = fill(0,2)
+    rs1 = 0
+    rs2 = 0
+    rd = 0
+    immediate_value_or_offset = 0
+    operator = "uninitialized"
+    pipeline_reg = 0
+    stall_present = false
+    stall_due_to_jump = false
+    stall_due_to_branch = false
+    stall_due_to_load = false
+    return Instruction(
+        Four_byte_instruction,
+        source_reg,
+        rs1,
+        rs2,
+        rd,
+        immediate_value_or_offset,
+        operator,
+        pipeline_reg,
+        stall_present,
+        stall_due_to_jump,
+        stall_due_to_branch,
+        stall_due_to_load
+    )
+end
+
+#==========================================================================================================
+                                        Core Initializing
 ===========================================================================================================#
 
 mutable struct Core_Object
@@ -9,81 +57,47 @@ mutable struct Core_Object
     pc::Int
     program::Array{String, 1}
     clock::Int
-
-    #Special Purpose Registers
     instruction_count::Int
+    
+    #Stall
     stall_count::Int
-    stall_in_present_clock::Bool
-    stall_at_instruction_fetch::Bool
-    stall_at_execution::Bool
-    stall_in_next_clock::Bool
     stall_due_to_jump::Bool
+    stall_present_due_to_data_depend_previous_inst::Bool
+    stall_present_due_to_data_depend_second_previous_inst::Bool
     stall_due_to_load::Bool
-    stall_due_to_df::Bool
-    data_forwarding_on::Bool
-    data_forwarding_for_Store_rs::Bool
-    data_forwarding_reg_i::Int
-    data_forwarding_reg_rs1::Int
-    data_forwarding_reg_rs2::Int
-    data_forwarding_reg_rd::Int
-    data_forwarding_for_branch::Bool
-    regi_dependent_on_previous_instruction::Bool
-    rs1_dependent_on_previous_instruction::Bool
-    rs2_dependent_on_previous_instruction::Bool
-    rd_dependent_on_previous_instruction::Bool
-    rs1_dependent_on_second_previous_instruction::Bool
-    rs2_dependent_on_second_previous_instruction::Bool
 
-    #For Instruction Fetch
-    instruction_reg_after_IF::String
+    #Objects for instructions
+    instruction_IF::Instruction
+    instruction_ID_RF::Instruction
+    instruction_EX::Instruction
+    instruction_MEM::Instruction
+    instruction_WriteBack::Instruction
+    
+    #Write back
+    write_back_of_last_instruction_done::Bool
+    write_back_of_second_last_instruction_done::Bool
 
-    #For instruction Decode / Register Fetch
-    rd_second_before::Int
-    rs2::Int
-    rs1::Int
-    rd::Int
-    immediate_value_or_offset::Int
-    present_operator::String
-    previous_operator::String
-    second_previous_operator::String
-    instruction_reg_after_ID_RF::String
-    temp_reg::String
-
-    #For Execution
-    execution_reg::Int
-    instruction_reg_after_Execution::String
-
-    #For Memory Access
-    previous_mem_reg::Int
-    mem_reg::Int
-    instruction_reg_after_Memory_Access::String
-
-    #For write Back
-    instruction_reg_after_Write_Back::String
-    writeBack_of_last_instruction::Bool
-    writeBack_of_second_last_instruction::Bool
-
-    #For Branch prediction
-    branch_to_be_taken_in_next_clock::Bool
-    branch_to_be_taken_in_present_clock::Bool
-    branch_pc::Int
+    #Branch Predictor
+    branch_predict_bit_1::Bool
+    branch_predict_bit_2::Bool
+    branch_taken::Bool
     branch_count::Int
-    branch_taken_count::Int
+    branch_correct_predict_count::Int
+    branch_pc::Int
 
-    #Variable Latency
-    variable_latency_present_clock::Bool
-    variable_latency_next_clock::Bool
-    variable_latency_count::Int
-    variable_latency_actual_count::Int
-    addi_variable_latency::Int
+    #Data Forwarding
+    data_forwarding::Bool
+    rs1_dependent_on_previous_instruction::Bool
+    rs1_dependent_on_second_previous_instruction::Bool
+    rs2_dependent_on_previous_instruction::Bool
+    rs2_dependent_on_second_previous_instruction::Bool
+    rd_dependent_on_previous_instruction::Bool
+    rd_dependent_on_second_previous_instruction::Bool
+    store_dependency::Bool
+    branch_dependency::Bool
+
+    #variable_latency
     add_variable_latency::Int
-    sub_variable_latency::Int
-end
-
-mutable struct Processor
-    memory::Array{UInt8,2}
-    clock::Int
-    cores::Array{Core_Object,1}
 end
 
 function core_Init(id)
@@ -91,76 +105,94 @@ function core_Init(id)
     pc = 1
     program = []
     clock = 0
-
-    #Special Purpose Registers
     instruction_count = 0
+
+    #Stall
     stall_count = 0
-    stall_in_present_clock = false
-    stall_at_instruction_fetch = false
-    stall_at_execution = false
-    stall_in_next_clock = false
     stall_due_to_jump = false
+    stall_present_due_to_data_depend_previous_inst = false
+    stall_present_due_to_data_depend_second_previous_inst = false
     stall_due_to_load = false
-    stall_due_to_df = false
-    data_forwarding_on = false
-    data_forwarding_for_Store_rs = false
-    data_forwarding_reg_i = 0
-    data_forwarding_reg_rs1 = 0
-    data_forwarding_reg_rs2 = 0
-    data_forwarding_reg_rd = 0
-    data_forwarding_for_branch = false
-    regi_dependent_on_previous_instruction = false
-    rs1_dependent_on_previous_instruction = false
-    rs2_dependent_on_previous_instruction = false
-    rd_dependent_on_previous_instruction = false
-    rs1_dependent_on_second_previous_instruction = false
-    rs2_dependent_on_second_previous_instruction = false
 
-    #For Instruction Fetch
-    instruction_reg_after_IF = "uninitialized"
+    #Objects for instructions
+    instruction_IF = instruction_Init()
+    instruction_ID_RF = instruction_Init()
+    instruction_EX = instruction_Init()
+    instruction_MEM = instruction_Init()
+    instruction_WriteBack = instruction_Init()
 
-    #For instruction Decode
-    rd_second_before = -1
-    rs2 = -1
-    rs1 = -1
-    rd = -1
-    immediate_value_or_offset = 0
-    present_operator = ""
-    previous_operator = ""
-    second_previous_operator = ""
-    instruction_reg_after_ID_RF = "uninitialized"
-    temp_reg = "uninitialized"
+    #write back
+    write_back_of_last_instruction_done = false
+    write_back_of_second_last_instruction_done = false
 
-    #For Executions
-    execution_reg = 0
-    instruction_reg_after_Execution = "uninitialized"
-
-    #For Memory Access
-    previous_mem_reg = 0
-    mem_reg = 0
-    instruction_reg_after_Memory_Access = "uninitialized"
-
-    #Write Back
-    instruction_reg_after_Write_Back = "uninitialized"
-    writeBack_of_last_instruction = false
-    writeBack_of_second_last_instruction = false
-
-    #Branch Prediction
-    branch_to_be_taken_in_next_clock = false
-    branch_to_be_taken_in_present_clock = false
-    branch_pc = 0
+    #Branch Predictor
+    branch_predict_bit_1 = true
+    branch_predict_bit_2 = true
+    branch_taken = true
     branch_count = 0
-    branch_taken_count = 0
+    branch_correct_predict_count = 0
+    branch_pc = 0
+    
+    #Data Forwarding
+    data_forwarding = false
+    rs1_dependent_on_previous_instruction = false
+    rs1_dependent_on_second_previous_instruction = false
+    rs2_dependent_on_previous_instruction = false
+    rs2_dependent_on_second_previous_instruction = false
+    rd_dependent_on_previous_instruction = false
+    rd_dependent_on_second_previous_instruction = false
+    store_dependency = false
+    branch_dependency = false
 
-    #Variable Latency
-    variable_latency_present_clock = false
-    variable_latency_next_clock = false
-    variable_latency_count = -1
-    variable_latency_actual_count = -1
-    addi_variable_latency = 0
-    add_variable_latency = 0
-    sub_variable_latency = 0
-    return Core_Object(id,registers, pc, program,clock,instruction_count,stall_count,stall_in_present_clock,stall_at_instruction_fetch,stall_at_execution,stall_in_next_clock,stall_due_to_jump,stall_due_to_load,stall_due_to_df,data_forwarding_on,data_forwarding_for_Store_rs,data_forwarding_reg_i,data_forwarding_reg_rs1,data_forwarding_reg_rs2,data_forwarding_reg_rd,data_forwarding_for_branch,regi_dependent_on_previous_instruction,rs1_dependent_on_previous_instruction,rs2_dependent_on_previous_instruction,rd_dependent_on_previous_instruction,rs1_dependent_on_second_previous_instruction,rs2_dependent_on_second_previous_instruction,instruction_reg_after_IF,rd_second_before,rs2,rs1,rd,immediate_value_or_offset,present_operator,previous_operator,second_previous_operator,instruction_reg_after_ID_RF,temp_reg,execution_reg,instruction_reg_after_Execution,previous_mem_reg,mem_reg,instruction_reg_after_Memory_Access,instruction_reg_after_Write_Back,writeBack_of_last_instruction,writeBack_of_second_last_instruction,branch_to_be_taken_in_next_clock,branch_to_be_taken_in_present_clock,branch_pc,branch_count,branch_taken_count,variable_latency_present_clock,variable_latency_next_clock,variable_latency_count,variable_latency_actual_count,addi_variable_latency,add_variable_latency,sub_variable_latency)
+    #Variable latency
+    add_variable_latency = 1
+    
+    return Core_Object(
+        id,
+        registers, 
+        pc, 
+        program,
+        clock,
+        instruction_count,
+        stall_count,
+        stall_due_to_jump,
+        stall_present_due_to_data_depend_previous_inst,
+        stall_present_due_to_data_depend_second_previous_inst,
+        stall_due_to_load,
+        instruction_IF,
+        instruction_ID_RF,
+        instruction_EX,
+        instruction_MEM,
+        instruction_WriteBack,
+        write_back_of_last_instruction_done,
+        write_back_of_second_last_instruction_done,
+        branch_predict_bit_1,
+        branch_predict_bit_2,
+        branch_taken,
+        branch_count,
+        branch_correct_predict_count,
+        branch_pc,
+        data_forwarding,
+        rs1_dependent_on_previous_instruction,
+        rs1_dependent_on_second_previous_instruction,
+        rs2_dependent_on_previous_instruction,
+        rs2_dependent_on_second_previous_instruction,
+        rd_dependent_on_previous_instruction,
+        rd_dependent_on_second_previous_instruction,
+        store_dependency,
+        branch_dependency,
+        add_variable_latency
+    )
+end
+
+#==========================================================================================================
+                                        Processor Initializing
+===========================================================================================================#
+
+mutable struct Processor
+    memory::Array{UInt8,2}
+    clock::Int
+    cores::Array{Core_Object,1}
 end
 
 function processor_Init()
@@ -169,5 +201,3 @@ function processor_Init()
     cores = [core_Init(1), core_Init(2)] 
     return Processor(memory, clock, cores)
 end
-
-                            

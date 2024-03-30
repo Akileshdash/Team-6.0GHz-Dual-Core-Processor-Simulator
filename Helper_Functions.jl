@@ -1,7 +1,35 @@
 include("Processor_Core_Init.jl")
-                    
-function predict(pc::Int)
-    return false
+
+function copy_properties!(target::Instruction, source::Instruction)
+    for field in fieldnames(Instruction)
+        if String(field) != "stall_present"
+            setfield!(target, field, getfield(source, field))
+        end
+    end
+end
+
+function updatePrediction(taken::Bool,core::Core_Object)
+    if core.branch_predict_bit_1 && core.branch_predict_bit_2
+        if !taken
+            core.branch_predict_bit_2 = false
+        end
+    elseif core.branch_predict_bit_1 && !core.branch_predict_bit_2
+        if taken
+            core.branch_predict_bit_2 = true
+        else
+            core.branch_predict_bit_1 = false
+        end
+    elseif !core.branch_predict_bit_1 && !core.branch_predict_bit_2
+        if taken
+            core.branch_predict_bit_2 = true
+        end
+    elseif !core.branch_predict_bit_1 && core.branch_predict_bit_2
+        if taken
+            core.branch_predict_bit_1 = true
+        else
+            core.branch_predict_bit_2 = false
+        end
+    end
 end
 
 #= 30 Helper Functions have been defined =#
@@ -468,53 +496,4 @@ function address_to_row_col(address)
     row = div(address,4) + 1
     col = (address%4) + 1
     return row,col
-end
-################################################################
-
-function print_2d(array_2d::Matrix{String})
-    for i in 1:n
-        for j in 1:n
-            print(array_2d[i, j], "\t")
-        end
-        println()
-    end
-end
-################################################################
-
-#we have passed the coordinates of the cell where the stall was first detected
-function shift_right(array_2d::Matrix{String}, row::Int, col::Int, stalls::Int)
-    copy_array = fill("0", n-row+1, n-col)
-    nrow, ncol = size(copy_array)
-
-    for i in row:n
-        for j in col+1:n
-            copy_array[i-row+1, j-col] = array_2d[i, j]  # Copy each element from src to dest
-        end
-    end
-
-    # for i in 1:nrow
-    #     for j in 1:ncol
-    #         print(copy_array[i, j], "\t")
-    #     end
-    #     println()
-    # end
-
-    for i in row:n
-        for j in col+1:col+stalls
-            array_2d[i, j] = "stall" # Copy each element from src to dest
-        end
-    end
-
-    println("------------------------------")
-    # print_2d(array_2d)
-
-    for i in row:n
-        for j in col+stalls+1:n
-            array_2d[i, j] = copy_array[i-row+1, j-col-stalls] # Copy each element from src to dest
-        end
-    end
-
-    println("------------------------------")
-    print_2d(array_2d)
-
 end
