@@ -16,6 +16,7 @@ mutable struct Instruction
     stall_due_to_jump::Bool
     stall_due_to_branch::Bool
     stall_due_to_load::Bool
+    stall_due_to_latency::Bool
 end
 
 function instruction_Init()
@@ -31,6 +32,7 @@ function instruction_Init()
     stall_due_to_jump = false
     stall_due_to_branch = false
     stall_due_to_load = false
+    stall_due_to_latency = false
     return Instruction(
         Four_byte_instruction,
         source_reg,
@@ -43,7 +45,8 @@ function instruction_Init()
         stall_present,
         stall_due_to_jump,
         stall_due_to_branch,
-        stall_due_to_load
+        stall_due_to_load,
+        stall_due_to_latency
     )
 end
 
@@ -95,9 +98,11 @@ mutable struct Core_Object
     rd_dependent_on_second_previous_instruction::Bool
     store_dependency::Bool
     branch_dependency::Bool
+    rd_dependent::Bool  #Temp we need to remove it
 
     #variable_latency
     add_variable_latency::Int
+    variable_latency::Int
 end
 
 function core_Init(id)
@@ -143,9 +148,11 @@ function core_Init(id)
     rd_dependent_on_second_previous_instruction = false
     store_dependency = false
     branch_dependency = false
+    rd_dependent = false
 
     #Variable latency
     add_variable_latency = 1
+    variable_latency = 0
     
     return Core_Object(
         id,
@@ -181,7 +188,9 @@ function core_Init(id)
         rd_dependent_on_second_previous_instruction,
         store_dependency,
         branch_dependency,
-        add_variable_latency
+        rd_dependent,
+        add_variable_latency,
+        variable_latency
     )
 end
 

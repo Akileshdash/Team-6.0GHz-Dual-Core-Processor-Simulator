@@ -45,7 +45,12 @@ end
 function operation_memory_access_without_df(core::Core_Object,instruction_MEM::Instruction,instruction_EX::Instruction,processor::Processor)
     copy_properties!(instruction_MEM, instruction_EX)
     if instruction_MEM.stall_present
-        core.instruction_WriteBack.stall_present = true
+        instruction_MEM.Four_byte_instruction = "uninitialized"
+        # core.instruction_WriteBack.stall_present = true
+        return
+    end
+    if instruction_MEM.stall_due_to_latency
+        instruction_MEM.Four_byte_instruction = "uninitialized"
         return
     end
     if instruction_MEM.Four_byte_instruction!="uninitialized"
@@ -76,6 +81,10 @@ function operation_memory_access_without_df(core::Core_Object,instruction_MEM::I
             core.write_back_of_second_last_instruction_done = false
         end
     end
+    if (instruction_MEM.operator == "ADD/SUB") && (instruction_MEM.Four_byte_instruction[2]=='0') && (core.add_variable_latency > 1)
+        core.instruction_ID_RF.stall_due_to_latency = false
+        core.instruction_IF.stall_due_to_latency = false
+    end
 end
 
 #==========================================================================================================
@@ -83,12 +92,22 @@ end
 ===========================================================================================================#
 
 function operation_execute_without_df(core::Core_Object,instruction_EX::Instruction,instruction_ID_RF::Instruction)
-    copy_properties!(instruction_EX,instruction_ID_RF)
+    if !instruction_EX.stall_due_to_latency
+        copy_properties!(instruction_EX,instruction_ID_RF)
+        # Variable Latency
+        if  (instruction_EX.operator == "ADD/SUB") && (instruction_EX.Four_byte_instruction[2]=='0') && core.add_variable_latency > 1
+            core.variable_latency = core.add_variable_latency
+        end
+    end
     if instruction_EX.stall_present
         core.stall_count+=1
         core.instruction_MEM.stall_present = true
         instruction_EX.Four_byte_instruction="uninitialized"
         return
+    end
+    if latency_present_without_df(core,instruction_EX)
+        core.write_back_of_last_instruction_done = false
+        return 
     end
     if instruction_EX.Four_byte_instruction!="uninitialized"
         Execute_Operation(core,instruction_EX)
@@ -102,6 +121,9 @@ end
 ===========================================================================================================#
 
 function operation_instructionDecode_RegisterFetch_without_df(core::Core_Object,instruction::Instruction)
+    if instruction.stall_due_to_latency
+        return
+    end
     if instruction.stall_due_to_branch
         instruction.stall_due_to_branch = false
         instruction.Four_byte_instruction = "uninitialized"
@@ -167,6 +189,9 @@ end
 ===========================================================================================================#
 
 function operation_instruction_Fetch_without_df(core::Core_Object,instruction::Instruction,processor::Processor)
+    if instruction.stall_due_to_latency
+        return
+    end
     if instruction.stall_present
         return
     end
@@ -284,5 +309,46 @@ function predict(core::Core_Object)
         return true
     elseif ( !core.branch_predict_bit_1 && !core.branch_predict_bit_2 ) || ( !core.branch_predict_bit_1 && core.branch_predict_bit_2 ) 
         return false
+    end
+end
+
+#==========================================================================================================
+                                            Latency Manager
+===========================================================================================================#
+
+function latency_present_without_df(core::Core_Object,instruction_EX::Instruction)
+    latency_manager_without_df(core,instruction_EX)
+    if core.variable_latency!=0
+        return true
+    else
+        core.instruction_MEM.stall_due_to_latency = false
+        core.instruction_EX.stall_due_to_latency = false
+        return false
+    end
+end
+
+function latency_manager_without_df(core::Core_Object,instruction_EX::Instruction)
+    if (instruction_EX.operator == "ADD/SUB") && (instruction_EX.Four_byte_instruction[2]=='0') && (core.add_variable_latency > 1) && (core.variable_latency!=0)    # ADD Instruction
+        #----------------------------------------------------------------------------------------------------
+        #First Ex stage
+        if core.add_variable_latency == core.variable_latency
+            # println("EX latency 1")#, latency count = ",core.variable_latency)
+            core.variable_latency -= 1
+            core.instruction_MEM.stall_due_to_latency = true
+            core.instruction_EX.stall_due_to_latency = true
+            return
+        end
+        #----------------------------------------------------------------------------------------------------
+        #latency for middle ex stages where stall will be present below ex stage
+        if core.add_variable_latency != core.variable_latency
+            # println("EX latency 2")#, latency count = ",core.variable_latency)
+            core.instruction_ID_RF.stall_due_to_latency = true
+            core.instruction_IF.stall_due_to_latency = true
+            if core.instruction_ID_RF.Four_byte_instruction!="uninitialized"
+                core.stall_count += 1
+            end
+            core.variable_latency -= 1
+            return
+        end
     end
 end
