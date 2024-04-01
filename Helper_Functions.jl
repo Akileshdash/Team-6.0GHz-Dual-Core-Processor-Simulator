@@ -1,5 +1,91 @@
 include("Processor_Core_Init.jl")
 
+#==============================================================================================
+                            Cache Replacement Functions
+==============================================================================================#
+
+function address_present_in_cache()
+end
+
+#==========================================================================================================
+                                                Stall Manager
+===========================================================================================================#
+
+function stall_manager(core::Core_Object)
+    #Terminating the stall
+    if ((core.write_back_of_last_instruction_done)&&(core.stall_present_due_to_data_depend_previous_inst))||((core.write_back_of_second_last_instruction_done)&&(core.stall_present_due_to_data_depend_second_previous_inst))
+        if core.stall_present_due_to_data_depend_previous_inst
+            core.stall_present_due_to_data_depend_previous_inst = false
+        elseif core.stall_present_due_to_data_depend_second_previous_inst
+            core.stall_present_due_to_data_depend_second_previous_inst = false
+        end
+        core.instruction_IF.stall_present = false
+        core.instruction_ID_RF.stall_present = false
+        core.instruction_EX.stall_present = false
+        core.instruction_MEM.stall_present = false
+        core.instruction_WriteBack.stall_present = false
+        core.write_back_of_last_instruction_done = false
+    end
+
+    if core.stall_due_to_jump 
+        core.stall_count += 1
+        core.stall_due_to_jump = false
+    end
+
+    if core.stall_due_to_load
+        core.instruction_EX.stall_due_to_load = true
+        core.instruction_ID_RF.stall_due_to_load = true
+        core.instruction_IF.stall_due_to_load = true
+        core.stall_due_to_load = false
+    end
+end
+#==========================================================================================================
+                                            Latency Manager
+===========================================================================================================#
+
+function latency_present(core::Core_Object,instruction_EX::Instruction)
+    latency_manager(core,instruction_EX)
+    if core.variable_latency!=0
+        return true
+    else
+        core.instruction_MEM.stall_due_to_latency = false
+        core.instruction_EX.stall_due_to_latency = false
+        return false
+    end
+end
+
+function latency_manager(core::Core_Object,instruction_EX::Instruction)
+    if (instruction_EX.operator == "ADD/SUB") && (instruction_EX.Four_byte_instruction[2]=='0') && (core.add_variable_latency > 1) && (core.variable_latency!=0)    # ADD Instruction
+        #----------------------------------------------------------------------------------------------------
+        #First Ex stage
+        if core.add_variable_latency == core.variable_latency
+            # println("EX latency 1")#, latency count = ",core.variable_latency)
+            core.variable_latency -= 1
+            core.instruction_MEM.stall_due_to_latency = true
+            core.instruction_EX.stall_due_to_latency = true
+            if core.data_forwarding
+                data_forward(core,instruction_EX)
+            end
+            return
+        end
+        #----------------------------------------------------------------------------------------------------
+        #latency for middle ex stages where stall will be present below ex stage
+        if core.add_variable_latency != core.variable_latency
+            # println("EX latency 2")#, latency count = ",core.variable_latency)
+            core.instruction_ID_RF.stall_due_to_latency = true
+            core.instruction_IF.stall_due_to_latency = true
+            if core.instruction_ID_RF.Four_byte_instruction!="uninitialized"
+                core.stall_count += 1
+            end
+            core.variable_latency -= 1
+            return
+        end
+    end
+end
+#==========================================================================================================
+                            Copying Properties from one instruction to another
+===========================================================================================================#
+
 function copy_properties!(target::Instruction, source::Instruction)
     for field in fieldnames(Instruction)
         if String(field) != "stall_present" && String(field) != "source_reg"
@@ -9,6 +95,18 @@ function copy_properties!(target::Instruction, source::Instruction)
             target.source_reg[1]=source.source_reg[1]
             target.source_reg[2]=source.source_reg[2]
         end
+    end
+end
+
+#==========================================================================================================
+                                            Branch Predictor
+===========================================================================================================#
+
+function predict(core::Core_Object)
+    if ( core.branch_predict_bit_1 && core.branch_predict_bit_2 ) || ( core.branch_predict_bit_1 && !core.branch_predict_bit_2 ) 
+        return true
+    elseif ( !core.branch_predict_bit_1 && !core.branch_predict_bit_2 ) || ( !core.branch_predict_bit_1 && core.branch_predict_bit_2 ) 
+        return false
     end
 end
 
@@ -35,6 +133,28 @@ function updatePrediction(taken::Bool,core::Core_Object)
         end
     end
 end
+
+#==========================================================================================================
+                                          Dependency Checker
+===========================================================================================================#
+
+function previous_instruction_checker(previous_instruction)
+    if (previous_instruction.rd!=0) && ( previous_instruction.operator!="BEQ" && previous_instruction.operator!="BNE" && previous_instruction.operator!="BLT" && previous_instruction.operator!="BGE" && previous_instruction.operator!="SW" && previous_instruction.operator!="SB" )
+        return true
+    end
+    return false
+end
+
+function second_previous_instruction_checker(core::Core_Object,second_previous_instruction)
+    if (second_previous_instruction.rd!=0) && (!core.write_back_of_second_last_instruction_done) && ( second_previous_instruction.operator!="BEQ" && second_previous_instruction.operator!="BNE" && second_previous_instruction.operator!="BLT" && second_previous_instruction.operator!="BGE" && second_previous_instruction.operator!="SW" && second_previous_instruction.operator!="SB" )
+        return true
+    end
+    return false
+end
+
+#==========================================================================================================
+                                            Data Forwarding
+===========================================================================================================#
 
 function data_forward(core::Core_Object,instruction_EX::Instruction)
     # Checking dependency for rs1
@@ -149,7 +269,9 @@ function get_instruction(opcode::AbstractString, func3::AbstractString)
     end
 end
 
-#==============================================================================================#
+#==============================================================================================
+                                    Parser Functions
+==============================================================================================#
 
 function replace_commas_with_spaces(input_string::String)
     return replace(input_string, "," => " ")

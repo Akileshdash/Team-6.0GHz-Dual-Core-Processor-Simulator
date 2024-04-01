@@ -16,7 +16,7 @@ function run_with_df(processor::Processor)
         operation_execute(      processor.cores[1],  processor.cores[1].instruction_EX,         processor.cores[1].instruction_ID_RF)
         operation_instructionDecode_RegisterFetch(processor.cores[1] ,processor.cores[1].instruction_ID_RF)
         operation_instruction_Fetch(processor.cores[1],processor.cores[1].instruction_IF, processor)
-        operation_stall_manager(processor.cores[1])
+        stall_manager(processor.cores[1])
         processor.cores[1].registers[1] = 0
     end
 end
@@ -238,39 +238,6 @@ function operation_instruction_Fetch(core::Core_Object,instruction::Instruction,
     else
         instruction.Four_byte_instruction = "uninitialized"
     end
-end 
-
-#==========================================================================================================
-                                                Stall Manager
-===========================================================================================================#
-
-function operation_stall_manager(core::Core_Object)
-    #Terminating the stall
-    if ((core.write_back_of_last_instruction_done)&&(core.stall_present_due_to_data_depend_previous_inst))||((core.write_back_of_second_last_instruction_done)&&(core.stall_present_due_to_data_depend_second_previous_inst))
-        if core.stall_present_due_to_data_depend_previous_inst
-            core.stall_present_due_to_data_depend_previous_inst = false
-        elseif core.stall_present_due_to_data_depend_second_previous_inst
-            core.stall_present_due_to_data_depend_second_previous_inst = false
-        end
-        core.instruction_IF.stall_present = false
-        core.instruction_ID_RF.stall_present = false
-        core.instruction_EX.stall_present = false
-        core.instruction_MEM.stall_present = false
-        core.instruction_WriteBack.stall_present = false
-        core.write_back_of_last_instruction_done = false
-    end
-
-    if core.stall_due_to_jump 
-        core.stall_count += 1
-        core.stall_due_to_jump = false
-    end
-    if core.stall_due_to_load
-        core.instruction_EX.stall_due_to_load = true
-        core.instruction_ID_RF.stall_due_to_load = true
-        core.instruction_IF.stall_due_to_load = true
-        core.stall_due_to_load = false
-    end
-
 end
 
 #==========================================================================================================
@@ -358,79 +325,6 @@ function check_Dependency(opcode, instruction::Instruction, previous_instruction
             if instruction.rd == second_previous_instruction.rd
                 core.rd_dependent_on_second_previous_instruction = true
             end
-        end
-    end
-    #--------------------------------------------------------------------------------------------#
-
-    if (core.stall_present_due_to_data_depend_previous_inst) || (core.stall_present_due_to_data_depend_second_previous_inst)
-        core.instruction_EX.stall_present = true
-        core.instruction_ID_RF.stall_present = true
-    end
-end
-
-function previous_instruction_checker(previous_instruction)
-    if (previous_instruction.rd!=0) && ( previous_instruction.operator!="BEQ" && previous_instruction.operator!="BNE" && previous_instruction.operator!="BLT" && previous_instruction.operator!="BGE" && previous_instruction.operator!="SW" && previous_instruction.operator!="SB" )
-        return true
-    end
-    return false
-end
-
-function second_previous_instruction_checker(core::Core_Object,second_previous_instruction)
-    if (second_previous_instruction.rd!=0) && (!core.write_back_of_second_last_instruction_done) && ( second_previous_instruction.operator!="BEQ" && second_previous_instruction.operator!="BNE" && second_previous_instruction.operator!="BLT" && second_previous_instruction.operator!="BGE" && second_previous_instruction.operator!="SW" && second_previous_instruction.operator!="SB" )
-        return true
-    end
-    return false
-end
-#==========================================================================================================
-                                            Branch Predictor
-===========================================================================================================#
-
-function predict(core::Core_Object)
-    if ( core.branch_predict_bit_1 && core.branch_predict_bit_2 ) || ( core.branch_predict_bit_1 && !core.branch_predict_bit_2 ) 
-        return true
-    elseif ( !core.branch_predict_bit_1 && !core.branch_predict_bit_2 ) || ( !core.branch_predict_bit_1 && core.branch_predict_bit_2 ) 
-        return false
-    end
-end
-
-#==========================================================================================================
-                                            Latency Manager
-===========================================================================================================#
-
-function latency_present(core::Core_Object,instruction_EX::Instruction)
-    latency_manager(core,instruction_EX)
-    if core.variable_latency!=0
-        return true
-    else
-        core.instruction_MEM.stall_due_to_latency = false
-        core.instruction_EX.stall_due_to_latency = false
-        return false
-    end
-end
-
-function latency_manager(core::Core_Object,instruction_EX::Instruction)
-    if (instruction_EX.operator == "ADD/SUB") && (instruction_EX.Four_byte_instruction[2]=='0') && (core.add_variable_latency > 1) && (core.variable_latency!=0)    # ADD Instruction
-        #----------------------------------------------------------------------------------------------------
-        #First Ex stage
-        if core.add_variable_latency == core.variable_latency
-            # println("EX latency 1")#, latency count = ",core.variable_latency)
-            core.variable_latency -= 1
-            core.instruction_MEM.stall_due_to_latency = true
-            core.instruction_EX.stall_due_to_latency = true
-            data_forward(core,instruction_EX)
-            return
-        end
-        #----------------------------------------------------------------------------------------------------
-        #latency for middle ex stages where stall will be present below ex stage
-        if core.add_variable_latency != core.variable_latency
-            # println("EX latency 2")#, latency count = ",core.variable_latency)
-            core.instruction_ID_RF.stall_due_to_latency = true
-            core.instruction_IF.stall_due_to_latency = true
-            if core.instruction_ID_RF.Four_byte_instruction!="uninitialized"
-                core.stall_count += 1
-            end
-            core.variable_latency -= 1
-            return
         end
     end
 end
