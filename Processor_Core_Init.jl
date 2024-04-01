@@ -1,5 +1,29 @@
 
 #==========================================================================================================
+                                             Cache
+===========================================================================================================#
+mutable struct Cache
+    size::Int
+    block_size::Int
+    associativity::Int
+    address_bar::Array{String, 1}
+    cache_memory::Array{String, 2}
+end
+
+function cache_Init()
+    size = 64000 
+    block_size = 16
+    associativity = 16
+
+    columns = div(size, block_size)
+    rows = block_size
+
+    address_bar = fill("", columns)
+    cache_memory = fill("", (rows,columns))
+    return Cache(size,block_size,associativity,address_bar,cache_memory)
+end
+
+#==========================================================================================================
                                         Instruction Object
 ===========================================================================================================#
 
@@ -199,14 +223,18 @@ end
 ===========================================================================================================#
 
 mutable struct Processor
+    cache::Cache
     memory::Array{UInt8,2}
+    main_memory_latency::Int
     clock::Int
     cores::Array{Core_Object,1}
 end
 
 function processor_Init()
+    cache = cache_Init()
     memory = zeros(UInt8, (1024, 4))
+    main_memory_latency = 1
     clock = 0
     cores = [core_Init(1), core_Init(2)] 
-    return Processor(memory, clock, cores)
+    return Processor(cache, memory, main_memory_latency, clock, cores)
 end

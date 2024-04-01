@@ -12,7 +12,7 @@ sim = processor_Init()
 #After Creation of Processor, we are encoding the asm instructions in both files into the memory of processor Check the file "Encoding_Instructions.jl" for this function
 encoding_all_instructions_to_memory(sim)
 println("encoding done")
-sim.cores[1].add_variable_latency = 5
+sim.main_memory_latency = 3
 print("Add variable latency : ")
 sim.cores[1].add_variable_latency = parse(Int,readline())
 println("with DF\t\tpress 1")
@@ -29,7 +29,7 @@ end
 # println("\nData Segment of Core 2 : \n")
 # Display_Memory(sim,769,790)
 # println("\nData Segment of Core 1 : \n")
-# Display_Memory(sim,513,535)
+Display_Memory(sim,513,535)
 
 
 println("Core 1 registers : ", sim.cores[1].registers)
