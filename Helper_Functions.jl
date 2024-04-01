@@ -2,8 +2,12 @@ include("Processor_Core_Init.jl")
 
 function copy_properties!(target::Instruction, source::Instruction)
     for field in fieldnames(Instruction)
-        if String(field) != "stall_present"
+        if String(field) != "stall_present" && String(field) != "source_reg"
             setfield!(target, field, getfield(source, field))
+        end
+        if String(field) == "source_reg"
+            target.source_reg[1]=source.source_reg[1]
+            target.source_reg[2]=source.source_reg[2]
         end
     end
 end
@@ -29,6 +33,35 @@ function updatePrediction(taken::Bool,core::Core_Object)
         else
             core.branch_predict_bit_2 = false
         end
+    end
+end
+
+function data_forward(core::Core_Object,instruction_EX::Instruction)
+    # Checking dependency for rs1
+    if core.rs1_dependent_on_previous_instruction
+        instruction_EX.source_reg[1] = core.instruction_MEM.pipeline_reg 
+        core.rs1_dependent_on_previous_instruction = false
+    elseif core.rs1_dependent_on_second_previous_instruction
+        instruction_EX.source_reg[1] = core.instruction_WriteBack.pipeline_reg
+        core.rs1_dependent_on_second_previous_instruction = false
+    end
+    # Checking dependency for rs2
+    if core.rs2_dependent_on_previous_instruction
+        instruction_EX.source_reg[2] = core.instruction_MEM.pipeline_reg 
+        core.rs2_dependent_on_previous_instruction = false
+    elseif core.rs2_dependent_on_second_previous_instruction
+        instruction_EX.source_reg[2] = core.instruction_WriteBack.pipeline_reg
+        core.rs2_dependent_on_second_previous_instruction = false
+    end
+    # Checking dependency for rd because we have done encoding like that for Store and branch statements
+    if core.rd_dependent_on_previous_instruction
+        instruction_EX.rd = core.instruction_MEM.pipeline_reg 
+        core.rd_dependent_on_previous_instruction = false
+        core.rd_dependent = true
+    elseif core.rd_dependent_on_second_previous_instruction
+        instruction_EX.rd = core.instruction_WriteBack.pipeline_reg
+        core.rd_dependent_on_second_previous_instruction = false
+        core.rd_dependent = false
     end
 end
 

@@ -6,32 +6,11 @@ function  Execute_Operation(core::Core_Object,instruction_EX::Instruction)
         instruction_EX.source_reg[1] = core.registers[instruction_EX.rs1+1]
         instruction_EX.source_reg[2] = core.registers[instruction_EX.rs2+1]
     else
-        # Checking dependency for rs1
-        if core.rs1_dependent_on_previous_instruction
-            instruction_EX.source_reg[1] = core.instruction_MEM.pipeline_reg 
-            core.rs1_dependent_on_previous_instruction = false
-        elseif core.rs1_dependent_on_second_previous_instruction
-            instruction_EX.source_reg[1] = core.instruction_WriteBack.pipeline_reg
-            core.rs1_dependent_on_second_previous_instruction = false
-        end
-        # Checking dependency for rs2
-        if core.rs2_dependent_on_previous_instruction
-            instruction_EX.source_reg[2] = core.instruction_MEM.pipeline_reg 
-            core.rs2_dependent_on_previous_instruction = false
-        elseif core.rs2_dependent_on_second_previous_instruction
-            instruction_EX.source_reg[2] = core.instruction_WriteBack.pipeline_reg
-            core.rs2_dependent_on_second_previous_instruction = false
-        end
-        # Checking dependency for rd because we have done encoding like that for Store and branch statements
-        if core.rd_dependent_on_previous_instruction
-            instruction_EX.rd = core.instruction_MEM.pipeline_reg 
-            core.rd_dependent_on_previous_instruction = false
-            rd_dependent = true
-        elseif core.rd_dependent_on_second_previous_instruction
-            instruction_EX.rd = core.instruction_WriteBack.pipeline_reg
-            core.rd_dependent_on_second_previous_instruction = false
-            rd_dependent = false
-        end
+        if (instruction_EX.operator == "ADD/SUB") && (instruction_EX.Four_byte_instruction[2]=='0') && (core.add_variable_latency > 1)
+            #We have already did data forwarding at the first ex stage of this instruction
+        else
+            data_forward(core,instruction_EX)
+        end 
     end
 
     #======================================================================
