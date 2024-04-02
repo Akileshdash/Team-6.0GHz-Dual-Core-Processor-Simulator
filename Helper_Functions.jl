@@ -1,12 +1,92 @@
 include("Processor_Core_Init.jl")
 
 #==============================================================================================
-                            Cache Replacement Functions
+                                    Cache Replacement Functions
 ==============================================================================================#
 
-function address_present_in_cache()
+function address_present_in_cache(cache::Cache,address)
+    address = int_to_32bit_bin(address)
+    cache.offset_bits = address[end-cache.length_of_offset_bits+1:end]
+    cache.index_bits = address[end-cache.length_of_offset_bits-cache.length_of_index_bits+1:end-cache.length_of_offset_bits]
+    cache.tag_bits = address[1:end-cache.length_of_offset_bits-cache.length_of_index_bits]
+    set_number = binary_to_uint8(cache.index_bits)
+    # println(address)
+    # println(cache.tag_bits," ",cache.index_bits," ",cache.offset_bits)
+    # println(set_number)
+
+    index = findfirst([block.block[1] == cache.tag_bits for block in cache.memory[set_number+1].set])
+    if index !== nothing
+        # println("Element found at index: ", index)
+        #Updating Recency
+        old_recency = cache.memory[set_number+1].set[index].recency
+        cache.memory[set_number+1].set[index].recency = 0
+        for i in 1:cache.associativity  
+            if cache.memory[set_number+1].set[i].recency < old_recency  &&  cache.memory[set_number+1].set[i].isValid
+                cache.memory[set_number+1].set[i].recency+=1
+            end
+        end
+        for i in 1:cache.associativity  
+            # println(cache.memory[set_number+1].set[i])
+        end
+        return cache.memory[set_number+1].set[index].block
+    else
+        # println("Element not found")
+        return -1
+    end
 end
 
+function place_block_in_cache(cache::Cache,address,memory)
+    block = retrieve_block_from_memory(cache,address,memory)      #Returns a string array of the bytes from memory
+    # println("Block retireved ",block)
+    set_number = binary_to_uint8(cache.index_bits)
+    # println("set number = ",set_number)
+    cache_replacement_policy(cache,block,set_number) 
+end
+
+function retrieve_block_from_memory(cache::Cache,address,memory)
+    Block = block_Init(cache.block_size)
+    address_in_bits = int_to_32bit_bin(address)
+    zeros = repeat("0",cache.length_of_offset_bits)
+    block_lower_bound = binary_to_uint8(address_in_bits[1:end-cache.length_of_offset_bits]*zeros)
+    block_upper_bound = block_lower_bound+cache.block_size-1
+    # tag 
+    Block.block[1] = cache.tag_bits
+    #Filling remaining with memory
+    for byte_address in block_lower_bound:block_upper_bound
+        Block.block[(byte_address % cache.block_size)+2] = int_to_8bit_bin(return_byte_from_memory(memory,byte_address))
+    end
+    return Block
+end
+
+function cache_replacement_policy(cache::Cache,Block,set_number)
+    index = nothing
+    #If initially any empty block is present in the set
+    for (block_index, block) in enumerate(cache.memory[set_number + 1].set)
+        if !block.isValid
+            index = block_index
+            Block.isValid = true
+            cache.memory[set_number + 1].set[index] = deepcopy(Block)
+            # println("came here")
+            break
+        end
+    end
+    if index == nothing
+        #From previous function we know set number 
+        tag_to_be_replaced = cache.memory[set_number+1].set
+        recencies = [block.recency for block in cache.memory[set_number + 1].set]
+        max_recency_index = argmax(recencies)
+        Block.isValid = true
+        cache.memory[set_number + 1].set[max_recency_index] = deepcopy(Block)
+    end
+    for block in cache.memory[set_number + 1].set 
+        if block.isValid
+            block.recency+=1 
+        end
+    end
+    for i in 1:cache.associativity
+        # println(cache.memory[set_number + 1].set[i])
+    end
+end
 #==========================================================================================================
                                                 Stall Manager
 ===========================================================================================================#
@@ -569,6 +649,11 @@ function return_word_from_memory_littleEndian(memory,address)
         temp = temp | ((UInt32(memory[row,col]))<<24)
     end
     return temp
+end
+
+function return_byte_from_memory(memory,address)
+    row,col = address_to_row_col(address)
+    return memory[row,col]
 end
 
 function address_to_row_col(address)

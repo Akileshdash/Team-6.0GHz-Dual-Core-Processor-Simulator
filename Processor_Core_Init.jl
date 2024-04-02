@@ -2,25 +2,70 @@
 #==========================================================================================================
                                              Cache
 ===========================================================================================================#
+mutable struct Block
+    size::Int
+    recency::Int
+    block::Array{String, 1}
+    isValid::Bool
+end
+
+function block_Init(size)
+    recency = 0
+    block = fill("", size + 1)
+    isValid = false
+    return Block(size, recency, block, isValid)
+end
+
+mutable struct Set
+    associativity::Int
+    set::Array{Block, 1}
+end
+
+function set_Init(associativity, block_size)
+    set = Block[]
+    for _ in 1:associativity
+        push!(set, block_Init(block_size))
+    end
+    return Set(associativity, set)
+end
+
 mutable struct Cache
     size::Int
     block_size::Int
     associativity::Int
-    address_bar::Array{String, 1}
-    cache_memory::Array{String, 2}
+    memory::Array{Set, 1}
+    length_of_offset_bits::Int
+    length_of_index_bits::Int
+    offset_bits::String
+    index_bits::String
+    tag_bits::String
 end
 
 function cache_Init()
-    size = 64000 
+    size = 64000
     block_size = 16
     associativity = 16
-
-    columns = div(size, block_size)
-    rows = block_size
-
-    address_bar = fill("", columns)
-    cache_memory = fill("", (rows,columns))
-    return Cache(size,block_size,associativity,address_bar,cache_memory)
+    number_of_sets = div(div(size, block_size),associativity)
+    memory = Set[]
+    for _ in 1:number_of_sets
+        push!(memory, set_Init(associativity, block_size))
+    end
+    length_of_offset_bits = Int(log2(block_size))
+    length_of_index_bits = Int(ceil(log2(number_of_sets)))
+    offset_bits = ""
+    index_bits = ""
+    tag_bits = ""
+    return Cache(
+        size,
+        block_size,
+        associativity,
+        memory,
+        length_of_offset_bits,
+        length_of_index_bits,
+        offset_bits,
+        index_bits,
+        tag_bits
+    )
 end
 
 #==========================================================================================================
@@ -228,6 +273,8 @@ mutable struct Processor
     main_memory_latency::Int
     clock::Int
     cores::Array{Core_Object,1}
+    hits::Int
+    accesses::Int
 end
 
 function processor_Init()
@@ -236,5 +283,7 @@ function processor_Init()
     main_memory_latency = 1
     clock = 0
     cores = [core_Init(1), core_Init(2)] 
-    return Processor(cache, memory, main_memory_latency, clock, cores)
+    hits = 0
+    accesses = 0
+    return Processor(cache, memory, main_memory_latency, clock, cores, hits, accesses)
 end

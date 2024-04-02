@@ -211,7 +211,18 @@ function operation_instruction_Fetch_without_df(core::Core_Object,instruction::I
     end
     memory = processor.memory
     if core.pc<=length(core.program)
-        instruction.Four_byte_instruction = int_to_8bit_bin(memory[core.pc,4])*int_to_8bit_bin(memory[core.pc,3])*int_to_8bit_bin(memory[core.pc,2])*int_to_8bit_bin(memory[core.pc,1])
+        address = (core.pc - 1)*4 
+        block_memory = address_present_in_cache(processor.cache,address)
+        processor.accesses+=1
+        if block_memory!=-1
+            #It is an hit
+            processor.hits+=1
+            instruction.Four_byte_instruction = block_memory[(address%processor.cache.block_size)+5]*block_memory[(address%processor.cache.block_size)+4]*block_memory[(address%processor.cache.block_size)+3]*block_memory[(address%processor.cache.block_size)+2]
+            instruction.Four_byte_instruction = int_to_8bit_bin(memory[core.pc,4])*int_to_8bit_bin(memory[core.pc,3])*int_to_8bit_bin(memory[core.pc,2])*int_to_8bit_bin(memory[core.pc,1])
+        else
+            place_block_in_cache(processor.cache,address,processor.memory)
+            instruction.Four_byte_instruction = int_to_8bit_bin(memory[core.pc,4])*int_to_8bit_bin(memory[core.pc,3])*int_to_8bit_bin(memory[core.pc,2])*int_to_8bit_bin(memory[core.pc,1])
+        end
         core.write_back_of_last_instruction_done = false
         # println("IF")
         core.pc+=1
