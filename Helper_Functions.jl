@@ -10,14 +10,14 @@ function address_present_in_cache(cache::Cache,address)
     cache.index_bits = address[end-cache.length_of_offset_bits-cache.length_of_index_bits+1:end-cache.length_of_offset_bits]
     cache.tag_bits = address[1:end-cache.length_of_offset_bits-cache.length_of_index_bits]
     set_number = binary_to_uint8(cache.index_bits)
-    # println(address)
-    # println(cache.tag_bits," ",cache.index_bits," ",cache.offset_bits)
-    # println(set_number)
-
+    # println("\n set number = ",set_number)
+    # Print the set
+    # for i in 1:cache.associativity
+    #     println(cache.memory[set_number + 1].set[i])
+    # end
     index = findfirst([block.block[1] == cache.tag_bits for block in cache.memory[set_number+1].set])
     if index !== nothing
-        # println("Element found at index: ", index)
-        #Updating Recency
+        # Updating Recency of that block
         old_recency = cache.memory[set_number+1].set[index].recency
         cache.memory[set_number+1].set[index].recency = 0
         for i in 1:cache.associativity  
@@ -25,22 +25,20 @@ function address_present_in_cache(cache::Cache,address)
                 cache.memory[set_number+1].set[i].recency+=1
             end
         end
-        for i in 1:cache.associativity  
-            # println(cache.memory[set_number+1].set[i])
-        end
-        return cache.memory[set_number+1].set[index].block
+        # println("Block present, addresss = ",cache.tag_bits," ",cache.index_bits," ",cache.offset_bits)
+        # return block_memory[(address%cache.block_size)+2]
+        return cache.memory[set_number+1].set[index].block[binary_to_uint8(cache.offset_bits)+2]
     else
-        # println("Element not found")
+        # println("Block Not Found addresss = ",cache.tag_bits," ",cache.index_bits," ",cache.offset_bits)
         return -1
     end
 end
 
 function place_block_in_cache(cache::Cache,address,memory)
-    block = retrieve_block_from_memory(cache,address,memory)      #Returns a string array of the bytes from memory
-    # println("Block retireved ",block)
+    new_block = retrieve_block_from_memory(cache,address,memory)      #Returns a string array of the bytes from memory
     set_number = binary_to_uint8(cache.index_bits)
-    # println("set number = ",set_number)
-    cache_replacement_policy(cache,block,set_number) 
+    cache_replacement_policy(cache,new_block,set_number) 
+    return new_block.block
 end
 
 function retrieve_block_from_memory(cache::Cache,address,memory)
@@ -49,6 +47,7 @@ function retrieve_block_from_memory(cache::Cache,address,memory)
     zeros = repeat("0",cache.length_of_offset_bits)
     block_lower_bound = binary_to_uint8(address_in_bits[1:end-cache.length_of_offset_bits]*zeros)
     block_upper_bound = block_lower_bound+cache.block_size-1
+    # println("address = ",address," block_lower_bound = ",block_lower_bound," block_upper_bound = ",block_upper_bound)
     # tag 
     Block.block[1] = cache.tag_bits
     #Filling remaining with memory
@@ -59,6 +58,7 @@ function retrieve_block_from_memory(cache::Cache,address,memory)
 end
 
 function cache_replacement_policy(cache::Cache,Block,set_number)
+    # println("new block = ",Block)
     index = nothing
     #If initially any empty block is present in the set
     for (block_index, block) in enumerate(cache.memory[set_number + 1].set)
@@ -66,7 +66,6 @@ function cache_replacement_policy(cache::Cache,Block,set_number)
             index = block_index
             Block.isValid = true
             cache.memory[set_number + 1].set[index] = deepcopy(Block)
-            # println("came here")
             break
         end
     end
@@ -83,9 +82,46 @@ function cache_replacement_policy(cache::Cache,Block,set_number)
             block.recency+=1 
         end
     end
-    for i in 1:cache.associativity
-        # println(cache.memory[set_number + 1].set[i])
+    #Printing the set 
+    # println("After Replacement Policy ----------------------------------------------------------")
+    # println("\n set number = ",set_number)
+    # for i in 1:cache.associativity
+    #     println(cache.memory[set_number + 1].set[i])
+    # end
+    # println("-------------------------------------------------------------------------------")
+end
+
+function write_through_cache(cache::Cache,bin,memory,address)
+    address = int_to_32bit_bin(address)
+    cache.offset_bits = address[end-cache.length_of_offset_bits+1:end]
+    cache.index_bits = address[end-cache.length_of_offset_bits-cache.length_of_index_bits+1:end-cache.length_of_offset_bits]
+    cache.tag_bits = address[1:end-cache.length_of_offset_bits-cache.length_of_index_bits]
+    set_number = binary_to_uint8(cache.index_bits)
+    index = findfirst([block.block[1] == cache.tag_bits for block in cache.memory[set_number+1].set])
+    if index !== nothing
+        # Updating Recency of that block
+        old_recency = cache.memory[set_number+1].set[index].recency
+        cache.memory[set_number+1].set[index].recency = 0
+        for i in 1:cache.associativity  
+            if cache.memory[set_number+1].set[i].recency < old_recency  &&  cache.memory[set_number+1].set[i].isValid
+                cache.memory[set_number+1].set[i].recency+=1
+            end
+        end
+        #Updating that byte in the block
+        cache.memory[set_number+1].set[index].block[binary_to_uint8(cache.offset_bits)+2] = bin
     end
+    # Printing the Set
+    # println("------------------------------------------------------------------------------------------------")
+    # println("Updated Set")
+    # for i in 1:cache.associativity
+    #     println(cache.memory[set_number + 1].set[i])
+    # end
+    # println("------------------------------------------------------------------------------------------------")
+    # Updating in the main memory also
+    address = binary_to_uint8(address)
+    # println("address = ",address)
+    row,col = address_to_row_col(address)
+    memory[row,col]=parse(Int, bin, base=2)
 end
 #==========================================================================================================
                                                 Stall Manager
@@ -449,8 +485,9 @@ function int_to_signed_20bit_bin_string(value::Int)
 end
 
 function int_to_32bit_bin(n::Int)
-    binary_str_20bit = string(n + 2^20, base=2)[2:end]
-    binary_str_32bit = string("0" ^ (32 - length(binary_str_20bit)), binary_str_20bit)
+    # binary_str_20bit = string(n + 2^20, base=2)[2:end]
+    # binary_str_32bit = string("0" ^ (32 - length(binary_str_20bit)), binary_str_20bit)
+    binary_str_32bit = string(n, base=2, pad=32)
     return binary_str_32bit
 end
 

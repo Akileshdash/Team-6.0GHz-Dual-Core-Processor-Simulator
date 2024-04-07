@@ -4,7 +4,6 @@ include("pipeline_without_DF.jl")
 include("pipeline_with_DF.jl")
 
 file_path_1 = "./Assembly_Codes/Bubble_Sort.s"
-# file_path_2 = "./Assembly_Codes/test.s"
 file_path_2 = "./Assembly_Codes/Selection_Sort.s"
 
 #Initialize a processor object (Check "Processor_Core_Init.jl" File)
@@ -16,16 +15,18 @@ println("encoding done")
 # sim.main_memory_latency = 3
 # print("Add variable latency : ")
 # sim.cores[1].add_variable_latency = parse(Int,readline())
-println("with DF\t\tpress 1")
-println("without DF\tpress 2")
-i = parse(Int,readline())
-if i==1
-    run_with_df(sim)
-else
+# println("with DF\t\tpress 1")
+# println("without DF\tpress 2")
+# i = parse(Int,readline())
+# if i==1
+#   run_with_df(sim)
+# else
   run_without_df(sim)
-end
-
-println("Miss rate = ",(1-(sim.hits/sim.accesses))*100)
+# end
+println("cache access = ",sim.accesses)
+println("Hits = ",sim.hits)
+println("Hit Rate = ",(sim.hits/sim.accesses)*100)
+println("Miss rate = ",(1-sim.hits/sim.accesses)*100)
 
 #Display a block of the memory of processor Check the file "Helper_Functions" for this function
 # println("\nData Segment of Core 2 : \n")
