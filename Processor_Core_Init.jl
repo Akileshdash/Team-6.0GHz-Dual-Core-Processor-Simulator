@@ -43,6 +43,9 @@ mutable struct Cache
     hit_time::Int
     temp_penalty_mem_access::Int
     temp_penalty_IF_access::Int
+    LRU_selected::Bool
+    Random_selected::Bool
+    Hashing_selected::Bool
 end
 
 function cache_Init()
@@ -63,6 +66,9 @@ function cache_Init()
     hit_time = 1
     temp_penalty_mem_access = 1
     temp_penalty_IF_access = 1
+    LRU_selected = false
+    Random_selected = false
+    Hashing_selected = false
     return Cache(
         size,
         block_size,
@@ -76,7 +82,10 @@ function cache_Init()
         miss_penalty,
         hit_time,
         temp_penalty_mem_access,
-        temp_penalty_IF_access
+        temp_penalty_IF_access,
+        LRU_selected,
+        Random_selected,
+        Hashing_selected
     )
 end
 

@@ -37,7 +37,13 @@ end
 function place_block_in_cache(cache::Cache,address,memory)
     new_block = retrieve_block_from_memory(cache,address,memory)      #Returns a string array of the bytes from memory
     set_number = binary_to_uint8(cache.index_bits)
-    cache_replacement_policy(cache,new_block,set_number) 
+    if cache.LRU_selected
+        LRU_cache_replacement_policy(cache,new_block,set_number) 
+    elseif cache.Hashing_selected
+        Hashing_cache_replacement_policy(cache,new_block,set_number) 
+    else
+        Random_cache_replacement_policy(cache,new_block,set_number)
+    end
     return new_block.block
 end
 
@@ -57,7 +63,7 @@ function retrieve_block_from_memory(cache::Cache,address,memory)
     return Block
 end
 
-function cache_replacement_policy(cache::Cache,Block,set_number)
+function LRU_cache_replacement_policy(cache::Cache,Block,set_number)
     # println("new block = ",Block)
     index = nothing
     #If initially any empty block is present in the set
@@ -89,6 +95,17 @@ function cache_replacement_policy(cache::Cache,Block,set_number)
     #     println(cache.memory[set_number + 1].set[i])
     # end
     # println("-------------------------------------------------------------------------------")
+end
+
+function Hashing_cache_replacement_policy(cache::Cache,Block,set_number)
+    hash_value = (binary_to_uint8(Block.block[1])%cache.block_size) + 1
+    Block.isValid = true
+    cache.memory[set_number + 1].set[hash_value] = deepcopy(Block)
+end
+
+function Random_cache_replacement_policy(cache::Cache,Block,set_number)
+    Block.isValid = true
+    cache.memory[set_number + 1].set[rand(1:cache.block_size)] = deepcopy(Block)
 end
 
 function write_through_cache(cache::Cache,bin,memory,address)
