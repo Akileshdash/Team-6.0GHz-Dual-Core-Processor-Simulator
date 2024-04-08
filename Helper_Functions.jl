@@ -127,7 +127,7 @@ end
                                                 Stall Manager
 ===========================================================================================================#
 
-function stall_manager(core::Core_Object)
+function stall_manager(core::Core_Object,processor::Processor)
     #Terminating the stall
     if ((core.write_back_of_last_instruction_done)&&(core.stall_present_due_to_data_depend_previous_inst))||((core.write_back_of_second_last_instruction_done)&&(core.stall_present_due_to_data_depend_second_previous_inst))
         if core.stall_present_due_to_data_depend_previous_inst
@@ -153,6 +153,37 @@ function stall_manager(core::Core_Object)
         core.instruction_ID_RF.stall_due_to_load = true
         core.instruction_IF.stall_due_to_load = true
         core.stall_due_to_load = false
+    end
+
+    if processor.cache.temp_penalty_mem_access > 1
+        core.instruction_IF.stall_due_to_mem_access = true
+        core.instruction_ID_RF.stall_due_to_mem_access = true
+        core.instruction_EX.stall_due_to_mem_access = true
+        core.instruction_MEM.stall_due_to_mem_access = true
+        core.instruction_WriteBack.stall_due_to_mem_access = true
+        processor.cache.temp_penalty_mem_access-=1
+        # println("processor.cache.temp_penalty_mem_access = ",processor.cache.temp_penalty_mem_access)
+    elseif processor.cache.temp_penalty_mem_access == 1
+        core.instruction_IF.stall_due_to_mem_access = false
+        core.instruction_ID_RF.stall_due_to_mem_access = false
+        core.instruction_EX.stall_due_to_mem_access = false
+        core.instruction_MEM.stall_due_to_mem_access = false
+        core.instruction_WriteBack.stall_due_to_mem_access = false
+        if processor.cache.temp_penalty_IF_access > 1 && processor.cache.temp_penalty_mem_access == 1
+            core.instruction_IF.stall_due_to_IF_access = true
+            core.instruction_ID_RF.stall_due_to_IF_access = true
+            core.instruction_EX.stall_due_to_IF_access = true
+            core.instruction_MEM.stall_due_to_IF_access = true
+            core.instruction_WriteBack.stall_due_to_IF_access = true
+            processor.cache.temp_penalty_IF_access-=1
+            # println("processor.cache.temp_penalty_IF_access = ",processor.cache.temp_penalty_IF_access)
+        elseif processor.cache.temp_penalty_IF_access == 1 && processor.cache.temp_penalty_mem_access == 1
+            core.instruction_IF.stall_due_to_IF_access = false
+            core.instruction_ID_RF.stall_due_to_IF_access = false
+            core.instruction_EX.stall_due_to_IF_access = false
+            core.instruction_MEM.stall_due_to_IF_access = false
+            core.instruction_WriteBack.stall_due_to_IF_access = false
+        end
     end
 end
 #==========================================================================================================

@@ -39,12 +39,16 @@ mutable struct Cache
     offset_bits::String
     index_bits::String
     tag_bits::String
+    miss_penalty::Int
+    hit_time::Int
+    temp_penalty_mem_access::Int
+    temp_penalty_IF_access::Int
 end
 
 function cache_Init()
-    size = 64000
-    block_size = 16
-    associativity = 16
+    size = 64
+    block_size = 8
+    associativity = 8
     number_of_sets = div(div(size, block_size),associativity)
     memory = Set[]
     for _ in 1:number_of_sets
@@ -55,6 +59,10 @@ function cache_Init()
     offset_bits = ""
     index_bits = ""
     tag_bits = ""
+    miss_penalty = 1
+    hit_time = 1
+    temp_penalty_mem_access = 1
+    temp_penalty_IF_access = 1
     return Cache(
         size,
         block_size,
@@ -64,7 +72,11 @@ function cache_Init()
         length_of_index_bits,
         offset_bits,
         index_bits,
-        tag_bits
+        tag_bits,
+        miss_penalty,
+        hit_time,
+        temp_penalty_mem_access,
+        temp_penalty_IF_access
     )
 end
 
@@ -86,6 +98,8 @@ mutable struct Instruction
     stall_due_to_branch::Bool
     stall_due_to_load::Bool
     stall_due_to_latency::Bool
+    stall_due_to_mem_access::Bool
+    stall_due_to_IF_access::Bool
 end
 
 function instruction_Init()
@@ -102,6 +116,8 @@ function instruction_Init()
     stall_due_to_branch = false
     stall_due_to_load = false
     stall_due_to_latency = false
+    stall_due_to_mem_access = false
+    stall_due_to_IF_access = false
     return Instruction(
         Four_byte_instruction,
         source_reg,
@@ -115,7 +131,9 @@ function instruction_Init()
         stall_due_to_jump,
         stall_due_to_branch,
         stall_due_to_load,
-        stall_due_to_latency
+        stall_due_to_latency,
+        stall_due_to_mem_access,
+        stall_due_to_IF_access
     )
 end
 
@@ -200,8 +218,8 @@ function core_Init(id)
     write_back_of_second_last_instruction_done = false
 
     #Branch Predictor
-    branch_predict_bit_1 = true
-    branch_predict_bit_2 = true
+    branch_predict_bit_1 = false
+    branch_predict_bit_2 = false
     branch_taken = true
     branch_count = 0
     branch_correct_predict_count = 0
@@ -270,7 +288,6 @@ end
 mutable struct Processor
     cache::Cache
     memory::Array{UInt8,2}
-    main_memory_latency::Int
     clock::Int
     cores::Array{Core_Object,1}
     hits::Int
@@ -280,10 +297,9 @@ end
 function processor_Init()
     cache = cache_Init()
     memory = zeros(UInt8, (1024, 4))
-    main_memory_latency = 1
     clock = 0
     cores = [core_Init(1), core_Init(2)] 
     hits = 0
     accesses = 0
-    return Processor(cache, memory, main_memory_latency, clock, cores, hits, accesses)
+    return Processor(cache, memory, clock, cores, hits, accesses)
 end

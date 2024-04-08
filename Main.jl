@@ -12,6 +12,10 @@ sim = processor_Init()
 #After Creation of Processor, we are encoding the asm instructions in both files into the memory of processor Check the file "Encoding_Instructions.jl" for this function
 encoding_all_instructions_to_memory(sim)
 println("encoding done")
+print("What is the miss penalty : ")
+sim.cache.miss_penalty = parse(Int,readline())
+print("What is the hit time : ")
+sim.cache.hit_time = parse(Int,readline())
 # sim.main_memory_latency = 3
 # print("Add variable latency : ")
 # sim.cores[1].add_variable_latency = parse(Int,readline())
@@ -23,10 +27,6 @@ println("encoding done")
 # else
   run_without_df(sim)
 # end
-println("cache access = ",sim.accesses)
-println("Hits = ",sim.hits)
-println("Hit Rate = ",(sim.hits/sim.accesses)*100)
-println("Miss rate = ",(1-sim.hits/sim.accesses)*100)
 
 #Display a block of the memory of processor Check the file "Helper_Functions" for this function
 # println("\nData Segment of Core 2 : \n")
@@ -34,11 +34,17 @@ println("Miss rate = ",(1-sim.hits/sim.accesses)*100)
 # println("\nData Segment of Core 1 : \n")
 # Display_Memory(sim,513,535)
 
+println("cache access = ",sim.accesses)
+println("Hits = ",sim.hits)
+println("Hit Rate = ",(sim.hits/sim.accesses)*100)
+println("Miss rate = ",(1-sim.hits/sim.accesses)*100)
+
 
 # println("Core 1 registers : ", sim.cores[1].registers)
 # println("Instructions : ",sim.cores[1].instruction_count)
-# println("core 1 clocks : ",sim.cores[1].clock)
-# println("Number of stalls : ",sim.cores[1].stall_count)
+println("core 1 clocks : ",sim.cores[1].clock)
+println("core 2 clocks : ",sim.cores[2].clock)
+println("Number of stalls : ",sim.cores[1].stall_count)
 # println("IPC : ",sim.cores[1].instruction_count/sim.cores[1].clock)
 # println("Branch prediction Accuracy: ",(sim.cores[1].branch_correct_predict_count/sim.cores[1].branch_count)*100)
 # println("Core 2 registers : ",sim.cores[2].registers)

@@ -22,12 +22,13 @@ end
 function pipeline_without_DF(core_id,processor::Processor)
     processor.cores[core_id].clock+=1
     # println("\nclock= ",processor.cores[core_id].clock," core : ",core_id)
+    # println("\n",processor.cores[core_id].clock)
     operation_writeBack_without_df(    processor.cores[core_id],  processor.cores[core_id].instruction_WriteBack,  processor.cores[core_id].instruction_MEM)
     operation_memory_access_without_df(processor.cores[core_id],  processor.cores[core_id].instruction_MEM,        processor.cores[core_id].instruction_EX, processor)
     operation_execute_without_df(      processor.cores[core_id],  processor.cores[core_id].instruction_EX,         processor.cores[core_id].instruction_ID_RF)
     operation_instructionDecode_RegisterFetch_without_df(processor.cores[core_id] ,processor.cores[core_id].instruction_ID_RF)
     operation_instruction_Fetch_without_df(processor.cores[core_id],processor.cores[core_id].instruction_IF, processor)
-    stall_manager(processor.cores[core_id])
+    stall_manager(processor.cores[core_id],processor)
     processor.cores[core_id].registers[1] = 0
 end
 
@@ -35,6 +36,12 @@ end
                                             Write Back
 ===========================================================================================================#
 function operation_writeBack_without_df(core::Core_Object,instruction_WriteBack::Instruction,instruction_MEM::Instruction)
+    if instruction_WriteBack.stall_due_to_mem_access
+        return
+    end
+    if instruction_WriteBack.stall_due_to_IF_access
+        return
+    end
     copy_properties!(instruction_WriteBack,instruction_MEM)
     if instruction_WriteBack.stall_present
         return
@@ -54,6 +61,13 @@ end
 ===========================================================================================================#
 
 function operation_memory_access_without_df(core::Core_Object,instruction_MEM::Instruction,instruction_EX::Instruction,processor::Processor)
+    if instruction_MEM.stall_due_to_mem_access
+        # println("MEM Access")
+        return
+    end
+    if instruction_MEM.stall_due_to_IF_access
+        return
+    end
     copy_properties!(instruction_MEM, instruction_EX)
     if instruction_MEM.stall_present
         instruction_MEM.Four_byte_instruction = "uninitialized"
@@ -80,13 +94,22 @@ function operation_memory_access_without_df(core::Core_Object,instruction_MEM::I
             # println(block_memory_byte_1," ",block_memory_byte_2," ",block_memory_byte_3," ",block_memory_byte_4)
             # If entire block is present in the cache
             if block_memory_byte_1 != -1 && block_memory_byte_4 != -1
-                #It is an hit
+                # It is an hit
                 # println("Its an hit")
                 processor.hits+=1
+                if processor.cache.hit_time > 1
+                    processor.cache.temp_penalty_mem_access = processor.cache.hit_time
+                    core.stall_count+=(processor.cache.hit_time-1)
+                end
                 instruction_MEM.pipeline_reg = binary_to_uint8(block_memory_byte_4*block_memory_byte_3*block_memory_byte_2*block_memory_byte_1)
             else
+                # It is not a hit
+                # println("Its not a hit")
+                if processor.cache.miss_penalty > 1
+                    processor.cache.temp_penalty_mem_access = processor.cache.miss_penalty
+                    core.stall_count+=(processor.cache.miss_penalty-1)
+                end
                 if block_memory_byte_1 == -1
-                    # println("Its not a hit")
                     # The entire 4 bytes lies within the same block
                     if address%processor.cache.block_size <= processor.cache.block_size-4
                         block_memory = place_block_in_cache(processor.cache, address, processor.memory)
@@ -172,6 +195,12 @@ end
 ===========================================================================================================#
 
 function operation_execute_without_df(core::Core_Object,instruction_EX::Instruction,instruction_ID_RF::Instruction)
+    if instruction_EX.stall_due_to_mem_access
+        return
+    end
+    if instruction_EX.stall_due_to_IF_access
+        return
+    end
     if !instruction_EX.stall_due_to_latency
         copy_properties!(instruction_EX,instruction_ID_RF)
         # Variable Latency
@@ -201,6 +230,12 @@ end
 ===========================================================================================================#
 
 function operation_instructionDecode_RegisterFetch_without_df(core::Core_Object,instruction::Instruction)
+    if instruction.stall_due_to_mem_access
+        return
+    end
+    if instruction.stall_due_to_IF_access
+        return
+    end
     if instruction.stall_due_to_latency
         return
     end
@@ -269,6 +304,13 @@ end
 ===========================================================================================================#
 
 function operation_instruction_Fetch_without_df(core::Core_Object,instruction::Instruction,processor::Processor)
+    if instruction.stall_due_to_mem_access
+        return
+    end
+    if instruction.stall_due_to_IF_access
+        # println("IF Access")
+        return
+    end
     if instruction.stall_due_to_latency
         return
     end
@@ -302,13 +344,24 @@ function operation_instruction_Fetch_without_df(core::Core_Object,instruction::I
         # block_memory = address_present_in_cache(processor.cache,address)    # Returns the block array of strings
         processor.accesses+=1
         if block_memory_byte_1 !=-1
+            # It is an hit
+            # println("It's a hit")
+            if processor.cache.hit_time > 1
+                processor.cache.temp_penalty_IF_access = processor.cache.hit_time
+                core.stall_count+=(processor.cache.hit_time-1)
+            end
             block_memory_byte_2 = address_present_in_cache(processor.cache, address + 1)    # Returns the byte if present in cahce ,else returns -1
             block_memory_byte_3 = address_present_in_cache(processor.cache, address + 2)    # Returns the byte if present in cahce ,else returns -1
             block_memory_byte_4 = address_present_in_cache(processor.cache, address + 3)    # Returns the byte if present in cahce ,else returns -1
             instruction.Four_byte_instruction = block_memory_byte_4 * block_memory_byte_3 * block_memory_byte_2 * block_memory_byte_1
-            # It is an hit
             processor.hits+=1
         else
+            # It is not a hit
+            # println("It's not a hit")
+            if processor.cache.miss_penalty > 1
+                processor.cache.temp_penalty_IF_access = processor.cache.miss_penalty
+                core.stall_count+=(processor.cache.miss_penalty-1)
+            end
             block_memory = place_block_in_cache(processor.cache,address,processor.memory)
             instruction.Four_byte_instruction = block_memory[(address%processor.cache.block_size)+5]*block_memory[(address%processor.cache.block_size)+4]*block_memory[(address%processor.cache.block_size)+3]*block_memory[(address%processor.cache.block_size)+2]
         end        
