@@ -6,25 +6,44 @@ include("Execute_Operation.jl")
 
 function run_with_df(processor::Processor)
     sim.cores[1].data_forwarding = true
+    sim.cores[2].data_forwarding = true
     println("Running with DF")
-    while !processor.cores[1].write_back_of_last_instruction_done
+    while !processor.cores[1].write_back_of_last_instruction_done && !processor.cores[2].write_back_of_last_instruction_done
         processor.clock+=1
-        processor.cores[1].clock+=1
-        # println("\n",processor.cores[1].clock)
-        operation_writeBack(    processor.cores[1],  processor.cores[1].instruction_WriteBack,  processor.cores[1].instruction_MEM)
-        operation_memory_access(processor.cores[1],  processor.cores[1].instruction_MEM,        processor.cores[1].instruction_EX, processor)
-        operation_execute(      processor.cores[1],  processor.cores[1].instruction_EX,         processor.cores[1].instruction_ID_RF)
-        operation_instructionDecode_RegisterFetch(processor.cores[1] ,processor.cores[1].instruction_ID_RF)
-        operation_instruction_Fetch(processor.cores[1],processor.cores[1].instruction_IF, processor)
-        stall_manager(processor.cores[1])
-        processor.cores[1].registers[1] = 0
+        for i in 1:2
+            pipeline_with_DF(i,processor)
+        end
     end
+    for i in 1:2
+        while !processor.cores[i].write_back_of_last_instruction_done
+            pipeline_with_DF(i,processor)
+        end
+    end
+end
+
+function pipeline_with_DF(core_id,processor::Processor)
+    processor.cores[core_id].clock+=1
+    # println("\nclock= ",processor.cores[core_id].clock," core : ",core_id)
+    # println("\n",processor.cores[core_id].clock)
+    operation_writeBack(    processor.cores[core_id],  processor.cores[core_id].instruction_WriteBack,  processor.cores[core_id].instruction_MEM)
+    operation_memory_access(processor.cores[core_id],  processor.cores[core_id].instruction_MEM,        processor.cores[core_id].instruction_EX, processor)
+    operation_execute(      processor.cores[core_id],  processor.cores[core_id].instruction_EX,         processor.cores[core_id].instruction_ID_RF)
+    operation_instructionDecode_RegisterFetch(processor.cores[core_id] ,processor.cores[core_id].instruction_ID_RF)
+    operation_instruction_Fetch(processor.cores[core_id],processor.cores[core_id].instruction_IF, processor)
+    stall_manager(processor.cores[core_id],processor)
+    processor.cores[core_id].registers[1] = 0
 end
 
 #==========================================================================================================
                                             Write Back
 ===========================================================================================================#
 function operation_writeBack(core::Core_Object,instruction_WriteBack::Instruction,instruction_MEM::Instruction)
+    if instruction_WriteBack.stall_due_to_mem_access
+        return
+    end
+    if instruction_WriteBack.stall_due_to_IF_access
+        return
+    end
     temp = instruction_WriteBack.pipeline_reg
     copy_properties!(instruction_WriteBack,instruction_MEM)
     if instruction_WriteBack.stall_present
@@ -47,6 +66,13 @@ end
 ===========================================================================================================#
 
 function operation_memory_access(core::Core_Object,instruction_MEM::Instruction,instruction_EX::Instruction,processor::Processor)
+    if instruction_MEM.stall_due_to_mem_access
+        # println("MEM Access")
+        return
+    end
+    if instruction_MEM.stall_due_to_IF_access
+        return
+    end
     copy_properties!(instruction_MEM, instruction_EX)
     if instruction_MEM.stall_present
         core.instruction_WriteBack.stall_present = true
@@ -64,14 +90,90 @@ function operation_memory_access(core::Core_Object,instruction_MEM::Instruction,
         memory = processor.memory
         address = instruction_EX.pipeline_reg
         if instruction_MEM.operator == "LW"
-            instruction_MEM.pipeline_reg = return_word_from_memory_littleEndian(memory,address)
+            # println("MEM LW")
+            block_memory_byte_1 = address_present_in_cache(processor.cache, address)    # Returns the byte if present in cahce ,else returns -1
+            block_memory_byte_2 = address_present_in_cache(processor.cache, address + 1)    # Returns the byte if present in cahce ,else returns -1
+            block_memory_byte_3 = address_present_in_cache(processor.cache, address + 2)    # Returns the byte if present in cahce ,else returns -1
+            block_memory_byte_4 = address_present_in_cache(processor.cache, address + 3)    # Returns the byte if present in cahce ,else returns -1
+            processor.accesses+=1
+
+            # println(block_memory_byte_1," ",block_memory_byte_2," ",block_memory_byte_3," ",block_memory_byte_4)
+            # If entire block is present in the cache
+            if block_memory_byte_1 != -1 && block_memory_byte_4 != -1
+                # It is an hit
+                # println("Its an hit")
+                processor.hits+=1
+                if processor.cache.hit_time > 1
+                    processor.cache.temp_penalty_mem_access = processor.cache.hit_time
+                    core.stall_count+=(processor.cache.hit_time-1)
+                end
+                instruction_MEM.pipeline_reg = binary_to_uint8(block_memory_byte_4*block_memory_byte_3*block_memory_byte_2*block_memory_byte_1)
+            else
+                # It is not a hit
+                # println("Its not a hit")
+                if processor.cache.miss_penalty > 1
+                    processor.cache.temp_penalty_mem_access = processor.cache.miss_penalty
+                    core.stall_count+=(processor.cache.miss_penalty-1)
+                end
+                if block_memory_byte_1 == -1
+                    # The entire 4 bytes lies within the same block
+                    if address%processor.cache.block_size <= processor.cache.block_size-4
+                        block_memory = place_block_in_cache(processor.cache, address, processor.memory)
+                        instruction_MEM.pipeline_reg = binary_to_uint8(block_memory[(address%processor.cache.block_size)+5]*block_memory[(address%processor.cache.block_size)+4]*block_memory[(address%processor.cache.block_size)+3]*block_memory[(address%processor.cache.block_size)+2])
+                    elseif address%processor.cache.block_size == processor.cache.block_size-3
+                        # println("came here -3")
+                        block_memory_1 = place_block_in_cache(processor.cache, address, processor.memory)
+                        block_memory_2 = place_block_in_cache(processor.cache, address+3, processor.memory)
+                        instruction_MEM.pipeline_reg = binary_to_uint8(block_memory_2[2]*block_memory_1[(address%processor.cache.block_size)+4]*block_memory_1[(address%processor.cache.block_size)+3]*block_memory_1[(address%processor.cache.block_size)+2])
+                    elseif address%processor.cache.block_size == processor.cache.block_size-2
+                        # println("came here -2")
+                        block_memory_1 = place_block_in_cache(processor.cache, address, processor.memory)
+                        block_memory_2 = place_block_in_cache(processor.cache, address+2, processor.memory)
+                        instruction_MEM.pipeline_reg = binary_to_uint8(block_memory_2[3]*block_memory_2[2]*block_memory_1[(address%processor.cache.block_size)+3]*block_memory_1[(address%processor.cache.block_size)+2])
+                    elseif address%processor.cache.block_size == processor.cache.block_size-1
+                        # println("came here -1")
+                        block_memory_1 = place_block_in_cache(processor.cache, address, processor.memory)
+                        block_memory_2 = place_block_in_cache(processor.cache, address+1, processor.memory)
+                        instruction_MEM.pipeline_reg = binary_to_uint8(block_memory_2[4]*block_memory_2[3]*block_memory_2[2]*block_memory_1[(address%processor.cache.block_size)+2])
+                    end
+                elseif block_memory_byte_2 == -1
+                    # place the new block in cache which starts from this byte
+                    block_memory = place_block_in_cache(processor.cache, address + 1, processor.memory)
+                    instruction_MEM.pipeline_reg = binary_to_uint8(block_memory[4]*block_memory[3]*block_memory[2]*block_memory_byte_1)
+                elseif block_memory_byte_3 == -1
+                    # place the new block in cache which starts from this byte
+                    block_memory = place_block_in_cache(processor.cache, address + 2, processor.memory)
+                    instruction_MEM.pipeline_reg = binary_to_uint8(block_memory[3]*block_memory[2]*block_memory_byte_2*block_memory_byte_1)
+                elseif block_memory_byte_4 == -1
+                    # place the new block in cache which starts from this byte
+                    block_memory = place_block_in_cache(processor.cache, address + 3, processor.memory)
+                    instruction_MEM.pipeline_reg = binary_to_uint8(block_memory[2]*block_memory_byte_3*block_memory_byte_2*block_memory_byte_1)
+                end
+            end
+            # instruction_MEM.pipeline_reg = return_word_from_memory_littleEndian(memory,address)
         elseif instruction_MEM.operator == "LB"
-            row,col = address_to_row_col(address)
-            instruction_MEM.pipeline_reg = memory[row,col]
+            block_memory_byte = address_present_in_cache(processor.cache, address)    # Returns the byte if present in cahce ,else returns -1
+            processor.accesses+=1
+            if block_memory_byte != -1
+                #It is a hit
+                processor.hits+=1
+                instruction_MEM.pipeline_reg = binary_to_uint8(block_memory_byte)
+            else
+                block_memory = place_block_in_cache(processor.cache, address, processor.memory)
+                instruction_MEM.pipeline_reg = binary_to_uint8(block_memory[(address%processor.cache.block_size)+2])
+            end
+            # row,col = address_to_row_col(address)
+            # instruction_MEM.pipeline_reg = memory[row,col]
         elseif instruction_MEM.operator=="SW"
-            row,col = address_to_row_col(address)
             bin = int_to_32bit_bin(core.registers[instruction_MEM.rs1+1])
-            in_memory_place_word(memory,row,col,bin)
+            write_through_cache(processor.cache,bin[25:32],processor.memory,address)
+            write_through_cache(processor.cache,bin[17:24],processor.memory,address+1)
+            write_through_cache(processor.cache,bin[9:16],processor.memory,address+2)
+            write_through_cache(processor.cache,bin[1:8],processor.memory,address+3)
+            
+            # row,col = address_to_row_col(address)
+            # bin = int_to_32bit_bin(core.registers[instruction_MEM.rs1+1])
+            # in_memory_place_word(memory,row,col,bin)
         end
         #--------------------------------------------------------------------------------------------#
 
@@ -96,6 +198,12 @@ end
 ===========================================================================================================#
 
 function operation_execute(core::Core_Object,instruction_EX::Instruction,instruction_ID_RF::Instruction)
+    if instruction_EX.stall_due_to_mem_access
+        return
+    end
+    if instruction_EX.stall_due_to_IF_access
+        return
+    end
     if !instruction_EX.stall_due_to_latency
         copy_properties!(instruction_EX,instruction_ID_RF)
         # Variable Latency
@@ -131,6 +239,12 @@ end
 ===========================================================================================================#
 
 function operation_instructionDecode_RegisterFetch(core::Core_Object,instruction::Instruction)
+    if instruction.stall_due_to_mem_access
+        return
+    end
+    if instruction.stall_due_to_IF_access
+        return
+    end
     if instruction.stall_due_to_latency
         return
     end
@@ -205,6 +319,13 @@ end
 ===========================================================================================================#
 
 function operation_instruction_Fetch(core::Core_Object,instruction::Instruction,processor::Processor)
+    if instruction.stall_due_to_mem_access
+        return
+    end
+    if instruction.stall_due_to_IF_access
+        # println("IF Access")
+        return
+    end
     if instruction.stall_due_to_latency
         return
     end
@@ -230,8 +351,40 @@ function operation_instruction_Fetch(core::Core_Object,instruction::Instruction,
         return
     end
     memory = processor.memory
-    if core.pc<=length(core.program)
-        instruction.Four_byte_instruction = int_to_8bit_bin(memory[core.pc,4])*int_to_8bit_bin(memory[core.pc,3])*int_to_8bit_bin(memory[core.pc,2])*int_to_8bit_bin(memory[core.pc,1])
+    # Condition for pc of two Cores
+    if core.id==1
+        limit = length(core.program)
+    elseif core.id==2
+        limit = length(processor.cores[1].program)+length(processor.cores[2].program)
+    end
+    if core.pc<=limit
+        address = (core.pc - 1)*4 
+        block_memory_byte_1 = address_present_in_cache(processor.cache, address)    # Returns the byte if present in cahce ,else returns -1
+        # block_memory = address_present_in_cache(processor.cache,address)    # Returns the block array of strings
+        processor.accesses+=1
+        if block_memory_byte_1 !=-1
+            # It is an hit
+            # println("It's a hit")
+            if processor.cache.hit_time > 1
+                processor.cache.temp_penalty_IF_access = processor.cache.hit_time
+                core.stall_count+=(processor.cache.hit_time-1)
+            end
+            block_memory_byte_2 = address_present_in_cache(processor.cache, address + 1)    # Returns the byte if present in cahce ,else returns -1
+            block_memory_byte_3 = address_present_in_cache(processor.cache, address + 2)    # Returns the byte if present in cahce ,else returns -1
+            block_memory_byte_4 = address_present_in_cache(processor.cache, address + 3)    # Returns the byte if present in cahce ,else returns -1
+            instruction.Four_byte_instruction = block_memory_byte_4 * block_memory_byte_3 * block_memory_byte_2 * block_memory_byte_1
+            processor.hits+=1
+        else
+            # It is not a hit
+            # println("It's not a hit")
+            if processor.cache.miss_penalty > 1
+                processor.cache.temp_penalty_IF_access = processor.cache.miss_penalty
+                core.stall_count+=(processor.cache.miss_penalty-1)
+            end
+            block_memory = place_block_in_cache(processor.cache,address,processor.memory)
+            instruction.Four_byte_instruction = block_memory[(address%processor.cache.block_size)+5]*block_memory[(address%processor.cache.block_size)+4]*block_memory[(address%processor.cache.block_size)+3]*block_memory[(address%processor.cache.block_size)+2]
+        end        
+        # instruction.Four_byte_instruction = int_to_8bit_bin(memory[core.pc,4])*int_to_8bit_bin(memory[core.pc,3])*int_to_8bit_bin(memory[core.pc,2])*int_to_8bit_bin(memory[core.pc,1])
         core.write_back_of_last_instruction_done = false
         # println("IF")
         core.pc+=1

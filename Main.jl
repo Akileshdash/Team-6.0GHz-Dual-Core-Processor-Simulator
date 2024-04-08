@@ -16,23 +16,22 @@ print("What is the miss penalty : ")
 sim.cache.miss_penalty = parse(Int,readline())
 print("What is the hit time : ")
 sim.cache.hit_time = parse(Int,readline())
-# sim.main_memory_latency = 3
 # print("Add variable latency : ")
 # sim.cores[1].add_variable_latency = parse(Int,readline())
-# println("with DF\t\tpress 1")
-# println("without DF\tpress 2")
-# i = parse(Int,readline())
-# if i==1
-#   run_with_df(sim)
-# else
+println("with DF\t\tpress 1")
+println("without DF\tpress 2")
+i = parse(Int,readline())
+if i==1
+  run_with_df(sim)
+else
   run_without_df(sim)
-# end
+end
 
 #Display a block of the memory of processor Check the file "Helper_Functions" for this function
 # println("\nData Segment of Core 2 : \n")
-# Display_Memory(sim,769,790)
+Display_Memory(sim,769,790)
 # println("\nData Segment of Core 1 : \n")
-# Display_Memory(sim,513,535)
+Display_Memory(sim,513,535)
 
 println("cache access = ",sim.accesses)
 println("Hits = ",sim.hits)
