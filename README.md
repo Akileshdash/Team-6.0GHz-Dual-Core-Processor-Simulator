@@ -48,6 +48,8 @@ julia main.jl
         - Hashing
         - Random
     - Hit Time and Miss Rate are also user defined values
+9. GUI
+    - The front end of GUI is completed but we have to connect it to the backend. We are expecting it to be completed by phase 4.
 # Computer Organization Project
 
 ## Description
@@ -81,8 +83,6 @@ This project is a simulator of a dual-core processor for the ISA of RISC-V. It w
 ├── `Pipeline_with_DF.jl`: This file contains implementation of Pipline with Data-Forwarding. <br>
 ├── `Pipeline_without_DF.jl`: This file contains implementation of Pipline without Data-Forwarding. <br>
 ├── `Processor_Core_Init.jl`: This file contains 4 classes used across the project. Namely: Cache, Instruction, Core, and Processor.
-
-├── /docs # Documentation files <br>
 
 ├── /Assembly_Codes <br>
 >├── `Bubble_Sort.jl`: This file contains assembly code for Bubble-Sort.<br>
