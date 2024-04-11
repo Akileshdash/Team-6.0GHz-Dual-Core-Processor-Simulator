@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resizable Columns</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: row;
+        }
+
+        .column {
+            min-width: 200px; /* Minimum width of columns */
+            overflow: auto;
+            border: 1px solid #ccc;
+            position: relative; /* Position relative for absolute positioning of middle column */
+        }
+
+        #left-column {
+            width: 20%; /* Initial width of left column */
+            background-color: black;
+            color: white;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        #right-column {
+            width: 30%; /* Initial width of right column */
+            background-color: white;
+            position: relative; /* Position relative for absolute positioning of middle column */
+        }
+
+        #middle-column {
+            position: relative;
+            top: 0;
+            bottom: 0;
+            width: 50%; /* Increased width of middle column */
+            background-color: gray; /* Gray color for middle column */
+            z-index: 1; /* To ensure it appears above the other columns */
+            padding: 20px; /* Padding for better readability */
+        }
+
+        .array-container {
+            margin-bottom: 10px;
+            width: 300px; /* Fixed width for the array container */
+        }
+
+        .array-container h2 {
+            margin: 0 0 10px 0; /* Set margin for H2 heading */
+        }
+
+        .array-container p {
+            margin: 0;
+        }
+
+        .array-element {
+            background-color: yellow; /* Setting background color for array elements */
+            padding: 5px 10px; /* Adding padding for better spacing */
+            margin-right: 1px; /* Adding margin between array elements */
+            display: inline; /* Displaying array elements inline */
+            padding-bottom: 2px; /* Adding bottom padding */
+        }
+
+        /* Styling for latency inputs */
+        .latency-input {
+            margin-top: 10px; /* Add margin between arrays and inputs */
+        }
+
+        /* Styling for toggle switch */
+        .toggle-switch input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            width: 40px;
+            height: 20px;
+            border-radius: 10px;
+            outline: none;
+            background-color: white; /* Set background color to white by default */
+            position: relative;
+            cursor: pointer;
+        }
+
+        .toggle-switch input[type="checkbox"]::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 10px; /* Adjust border radius to match the capsule shape */
+            background-color: black; /* Set the capsule color to black */
+            top: 0;
+            left: 0;
+            transition: 0.3s;
+        }
+
+        .toggle-switch input[type="checkbox"]:checked {
+            background-color: black; /* Change background color to black when checked */
+        }
+
+        .toggle-switch input[type="checkbox"]:checked::before {
+            left: 20px;
+            background-color: white; /* Change handle color to white when checked */
+        }
+
+        /* Styling for the table */
+        #table-container {
+            background-color: lightblue;
+            overflow: auto; /* Enable scrolling */
+            max-height: 70vh; /* Limit maximum height for scrolling */
+            max-width: 100%; /* Limit maximum width for scrolling */
+        }
+
+        #myTable {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        #myTable td, #myTable th {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        #myTable tr:nth-child(even){background-color: #f2f2f2;}
+
+        #myTable tr:hover {background-color: #ddd;}
+
+        #myTable th {
+            padding-top: 12px;
+            padding-bottom: 12px;
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        /* Styling for the navbar */
+        .navbar {
+            background-color: #333;
+            overflow: auto; /* Enable scrolling */
+            max-width: 100%; /* Limit maximum width for scrolling */
+            padding: 20px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="left-column" class="column">
+        <div class="textbox-container">
+            <h2>Core-1:</h2> <!-- Heading for the first text box -->
+            <textarea id="core1" name="core1" rows="5" cols="25"></textarea> <!-- First text area -->
+            <hr width="0">
+            <button onclick="saveCore1()">Save</button> <!-- Save button for Core-1 input -->
+        </div>
+        <div class="textbox-container">
+            <h2>Core-2:</h2> <!-- Heading for the second text box -->
+            <textarea id="core2" name="core2" rows="5" cols="25"></textarea> <!-- Second text area -->
+            <hr width="0">
+            <button onclick="saveCore2()">Save</button> <!-- Save button for Core-2 input -->
+        </div>
+    </div>
+    <div id="middle-column">
+        <div class="array-container">
+            <h2>Array-1:</h2>
+            <!-- Generating elements for the first array dynamically -->
+            <script>
+                for (let i = 0; i < 16; i++) {
+                    document.write('<div class="array-element">' + i + '</div>');
+                }
+            </script>
+            <!-- Horizontal rule -->
+            <hr width="0">
+            <!-- Generating elements for the first array dynamically -->
+            <script>
+                for (let i = 16; i < 32; i++) {
+                    document.write('<div class="array-element">' + i + '</div>');
+                }
+            </script>
+        </div>
+        <div class="array-container">
+            <h2>Array-2:</h2>
+            <!-- Generating elements for the second array dynamically -->
+            <script>
+                for (let i = 0; i < 16; i++) {
+                    document.write('<div class="array-element">' + i + '</div>');
+                }
+            </script>
+            <!-- Horizontal rule -->
+            <hr width="0">
+            <!-- Generating elements for the second array dynamically -->
+            <script>
+                for (let i = 16; i < 32; i++) {
+                    document.write('<div class="array-element">' + i + '</div>');
+                }
+            </script>
+        </div>
+        <!-- Latency inputs -->
+        <div class="latency-input">
+            <h2>Latency for ADD:</h2>
+            <input type="text" id="addLatency" name="addLatency">
+        </div>
+        <div class="latency-input">
+            <h2>Latency for SUB:</h2>
+            <input type="text" id="subLatency" name="subLatency">
+        </div>
+        <div class="latency-input">
+            <h2>Latency for ADDI:</h2>
+            <input type="text" id="addiLatency" name="addiLatency">
+        </div>
+        <!-- Toggle switch for data forwarding -->
+        <div class="toggle-switch">
+            <h2>Data Forwarding:</h2>
+            <label>
+                <input type="checkbox">
+            </label>
+        </div>
+          <!-- Toggle switch for CRP -->
+        <div class="toggle-switch">
+            <h2>CRP:</h2>
+            <label>
+                <input type="checkbox" id="crpToggle">
+            </label>
+        </div>
+    </div>
+    <div id="right-column" class="column">
+        <!-- Table container -->
+        <div id="table-container">
+            <table id="myTable">
+                <thead>
+                    <tr>
+                        <th>Sr No.</th> <!-- Changed column-1 to Sr No. -->
+                        <th>Column 2</th>
+                        <th>Column 3</th>
+                        <th>Column 4</th>
+                        <th>Column 5</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Generate rows with initial content -->
+                    <script>
+                        for (let i = 1023; i >= 0; i--) { // Start numbering from 1023 and decrement
+                            document.write('<tr>');
+                            document.write('<td>' + i + '</td>'); // Fill first column with the serial number
+                            for (let j = 1; j <= 4; j++) { // Fill other columns with "-"
+                                document.write('<td>-</td>');
+                            }
+                            document.write('</tr>');
+                        }
+                    </script>
+                </tbody>
+            </table>
+        </div>
+        <!-- Navbar at the bottom of the right column -->
+        <div class="navbar">
+            <span>Navbar Content</span>
+        </div>
+    </div>
+
+    <script>
+        function saveCore1() {
+            const core1Input = document.getElementById('core1').value;
+            const blob = new Blob([core1Input], { type: 'text/plain' });
+            const fileName = 'core1Prog.txt';
+
+            // Prompt the user for confirmation to overwrite the existing file
+            if (confirm('Do you want to save the content of Core-1 input to core1Prog.txt?')) {
+                downloadFile(blob, fileName);
+            }
+        } 
+
+        // Function to save the content of Core-2 input to a file
+        function saveCore2() {
+            const core2Input = document.getElementById('core2').value;
+            const blob = new Blob([core2Input], { type: 'text/plain' });
+            const fileName = 'core2Prog.txt';
+
+            // Prompt the user for confirmation to overwrite the existing file
+            if (confirm('Do you want to save the content of Core-2 input to core2Prog.txt?')) {
+                downloadFile(blob, fileName);
+            }
+        }
+
+        // Function to download a file
+        function downloadFile(blob, fileName) {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            link.click();
+        }
+
+        // Function to toggle text based on the state of the CRP toggle switch
+        function toggleCRPText() {
+            const crpToggle = document.getElementById('crpToggle');
+            const crpText = document.getElementById('crpText');
+            if (crpToggle.checked) {
+                crpText.textContent = 'Custom Policy';
+            } else {
+                crpText.textContent = 'LRU';
+            }
+        }
+
+        // Event listener for the CRP toggle switch
+        const crpToggle = document.getElementById('crpToggle');
+        crpToggle.addEventListener('change', toggleCRPText);
+        toggleCRPText(); // Initial call to set the text based on the initial state of the toggle
+    </script>
+</body>
+</html>
