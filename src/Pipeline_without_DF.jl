@@ -85,62 +85,84 @@ function operation_memory_access_without_df(core::Core_Object,instruction_MEM::I
         address = instruction_EX.pipeline_reg
         if instruction_MEM.operator == "LW"
             # println("MEM LW")
-            block_memory_byte_1 = address_present_in_cache(processor.cache, address)    # Returns the byte if present in cahce ,else returns -1
-            block_memory_byte_2 = address_present_in_cache(processor.cache, address + 1)    # Returns the byte if present in cahce ,else returns -1
-            block_memory_byte_3 = address_present_in_cache(processor.cache, address + 2)    # Returns the byte if present in cahce ,else returns -1
-            block_memory_byte_4 = address_present_in_cache(processor.cache, address + 3)    # Returns the byte if present in cahce ,else returns -1
-            processor.accesses+=1
+            block_memory_byte_1 = address_present_in_L1_cache(core.L1_cache, address)    # Returns the byte if present in cahce ,else returns -1
+            block_memory_byte_2 = address_present_in_L1_cache(core.L1_cache, address + 1)    # Returns the byte if present in cahce ,else returns -1
+            block_memory_byte_3 = address_present_in_L1_cache(core.L1_cache, address + 2)    # Returns the byte if present in cahce ,else returns -1
+            block_memory_byte_4 = address_present_in_L1_cache(core.L1_cache, address + 3)    # Returns the byte if present in cahce ,else returns -1
+            core.L1_cache.accesses+=1
 
             # println(block_memory_byte_1," ",block_memory_byte_2," ",block_memory_byte_3," ",block_memory_byte_4)
             # If entire block is present in the cache
             if block_memory_byte_1 != -1 && block_memory_byte_4 != -1
                 # It is an hit
                 # println("Its an hit")
-                processor.hits+=1
-                if processor.cache.hit_time > 1
-                    processor.cache.temp_penalty_mem_access = processor.cache.hit_time
-                    core.stall_count+=(processor.cache.hit_time-1)
+                # processor.hits+=1
+                core.L1_cache.hits+=1
+                if core.L1_cache.hit_time > 1
+                    core.L1_cache.temp_penalty_mem_access = core.L1_cache.hit_time
+                    core.stall_count+=(core.L1_cache.hit_time-1)
                 end
                 instruction_MEM.pipeline_reg = binary_to_uint8(block_memory_byte_4*block_memory_byte_3*block_memory_byte_2*block_memory_byte_1)
             else
                 # It is not a hit
                 # println("Its not a hit")
-                if processor.cache.miss_penalty > 1
-                    processor.cache.temp_penalty_mem_access = processor.cache.miss_penalty
-                    core.stall_count+=(processor.cache.miss_penalty-1)
+                if core.L1_cache.miss_penalty > 1
+                    core.L1_cache.temp_penalty_mem_access = core.L1_cache.miss_penalty
+                    core.stall_count+=(core.L1_cache.miss_penalty-1)
                 end
                 if block_memory_byte_1 == -1
                     # The entire 4 bytes lies within the same block
-                    if address%processor.cache.block_size <= processor.cache.block_size-4
-                        block_memory = place_block_in_cache(processor.cache, address, processor.memory)
-                        instruction_MEM.pipeline_reg = binary_to_uint8(block_memory[(address%processor.cache.block_size)+5]*block_memory[(address%processor.cache.block_size)+4]*block_memory[(address%processor.cache.block_size)+3]*block_memory[(address%processor.cache.block_size)+2])
-                    elseif address%processor.cache.block_size == processor.cache.block_size-3
-                        # println("came here -3")
-                        block_memory_1 = place_block_in_cache(processor.cache, address, processor.memory)
-                        block_memory_2 = place_block_in_cache(processor.cache, address+3, processor.memory)
-                        instruction_MEM.pipeline_reg = binary_to_uint8(block_memory_2[2]*block_memory_1[(address%processor.cache.block_size)+4]*block_memory_1[(address%processor.cache.block_size)+3]*block_memory_1[(address%processor.cache.block_size)+2])
-                    elseif address%processor.cache.block_size == processor.cache.block_size-2
-                        # println("came here -2")
-                        block_memory_1 = place_block_in_cache(processor.cache, address, processor.memory)
-                        block_memory_2 = place_block_in_cache(processor.cache, address+2, processor.memory)
-                        instruction_MEM.pipeline_reg = binary_to_uint8(block_memory_2[3]*block_memory_2[2]*block_memory_1[(address%processor.cache.block_size)+3]*block_memory_1[(address%processor.cache.block_size)+2])
-                    elseif address%processor.cache.block_size == processor.cache.block_size-1
-                        # println("came here -1")
-                        block_memory_1 = place_block_in_cache(processor.cache, address, processor.memory)
-                        block_memory_2 = place_block_in_cache(processor.cache, address+1, processor.memory)
-                        instruction_MEM.pipeline_reg = binary_to_uint8(block_memory_2[4]*block_memory_2[3]*block_memory_2[2]*block_memory_1[(address%processor.cache.block_size)+2])
+                    if address%core.L1_cache.block_size <= core.L1_cache.block_size-4   # entire 4 bytes belongs to the same block
+                        # Now we have to check if all 4 bytes are present in LLC Cache
+
+                        processor.LLC_cache.accesses+=1
+                        block_memory_byte_1 = address_present_in_LLC_cache(processor.LLC_cache, address)
+                        if block_memory_byte_1 !=-1      
+                            # Its a hit in LLC Cache
+                            processor.LLC_cache.hits+=1
+                            # First we have to place the block in the L1 cache
+                            # Block sizes may be different for LLC and L1 caches
+                            place_block_in_L1_cache_from_LLC_Cache(core.L1_cache,processor.LLC_cache,address,processor.memory)
+                            block_memory_byte_2 = address_present_in_L1_cache(core.L1_cache, address + 1)
+                            block_memory_byte_3 = address_present_in_L1_cache(core.L1_cache, address + 2)
+                            block_memory_byte_4 = address_present_in_L1_cache(core.L1_cache, address + 3)
+
+                            instruction_MEM.pipeline_reg = binary_to_uint8(block_memory_byte_4*block_memory_byte_3*block_memory_byte_2*block_memory_byte_1)
+                        else 
+                            # It is not a hit in the LLC ,
+                            # we have to fetch the block from main memory and put it in LLC and L1 caches
+                            place_block_in_LLC_cache_from_main_memory(processor.LLC_cache,address,processor.memory)
+                            block_memory = place_block_in_L1_cache_from_main_memory(core.L1_cache, address, processor.memory)
+                            instruction_MEM.pipeline_reg = binary_to_uint8(block_memory[(address%core.L1_cache.block_size)+2])
+                        end
+                        
+
+                        block_memory = place_block_in_L1_cache_from_main_memory(core.L1_cache, address, processor.memory)
+                        instruction_MEM.pipeline_reg = binary_to_uint8(block_memory[(address%core.L1_cache.block_size)+5]*block_memory[(address%core.L1_cache.block_size)+4]*block_memory[(address%core.L1_cache.block_size)+3]*block_memory[(address%core.L1_cache.block_size)+2])
+                    elseif address%core.L1_cache.block_size == core.L1_cache.block_size-3   # The last byte belongs to a different block 
+                        block_memory_1 = place_block_in_L1_cache_from_main_memory(core.L1_cache, address, processor.memory)
+                        block_memory_2 = place_block_in_L1_cache_from_main_memory(core.L1_cache, address+3, processor.memory)
+                        instruction_MEM.pipeline_reg = binary_to_uint8(block_memory_2[2]*block_memory_1[(address%core.L1_cache.block_size)+4]*block_memory_1[(address%core.L1_cache.block_size)+3]*block_memory_1[(address%core.L1_cache.block_size)+2])
+                    elseif address%core.L1_cache.block_size == core.L1_cache.block_size-2   # The last two bytes belongs to a different block
+                        block_memory_1 = place_block_in_L1_cache_from_main_memory(core.L1_cache, address, processor.memory)
+                        block_memory_2 = place_block_in_L1_cache_from_main_memory(core.L1_cache, address+2, processor.memory)
+                        instruction_MEM.pipeline_reg = binary_to_uint8(block_memory_2[3]*block_memory_2[2]*block_memory_1[(address%core.L1_cache.block_size)+3]*block_memory_1[(address%core.L1_cache.block_size)+2])
+                    elseif address%core.L1_cache.block_size == core.L1_cache.block_size-1   # The last three bytes belongs to a different block
+                        block_memory_1 = place_block_in_L1_cache_from_main_memory(core.L1_cache, address, processor.memory)
+                        block_memory_2 = place_block_in_L1_cache_from_main_memory(core.L1_cache, address+1, processor.memory)
+                        instruction_MEM.pipeline_reg = binary_to_uint8(block_memory_2[4]*block_memory_2[3]*block_memory_2[2]*block_memory_1[(address%core.L1_cache.block_size)+2])
                     end
                 elseif block_memory_byte_2 == -1
                     # place the new block in cache which starts from this byte
-                    block_memory = place_block_in_cache(processor.cache, address + 1, processor.memory)
+                    block_memory = place_block_in_L1_cache_from_main_memory(core.L1_cache, address + 1, processor.memory)
                     instruction_MEM.pipeline_reg = binary_to_uint8(block_memory[4]*block_memory[3]*block_memory[2]*block_memory_byte_1)
                 elseif block_memory_byte_3 == -1
                     # place the new block in cache which starts from this byte
-                    block_memory = place_block_in_cache(processor.cache, address + 2, processor.memory)
+                    block_memory = place_block_in_L1_cache_from_main_memory(core.L1_cache, address + 2, processor.memory)
                     instruction_MEM.pipeline_reg = binary_to_uint8(block_memory[3]*block_memory[2]*block_memory_byte_2*block_memory_byte_1)
                 elseif block_memory_byte_4 == -1
                     # place the new block in cache which starts from this byte
-                    block_memory = place_block_in_cache(processor.cache, address + 3, processor.memory)
+                    block_memory = place_block_in_L1_cache_from_main_memory(core.L1_cache, address + 3, processor.memory)
                     instruction_MEM.pipeline_reg = binary_to_uint8(block_memory[2]*block_memory_byte_3*block_memory_byte_2*block_memory_byte_1)
                 end
             end
@@ -148,15 +170,32 @@ function operation_memory_access_without_df(core::Core_Object,instruction_MEM::I
             # instruction_MEM.pipeline_reg = return_word_from_memory_littleEndian(memory,address)
             # println("LW After  : bin = ",int_to_32bit_bin(instruction_MEM.pipeline_reg)[1:8]," ",int_to_32bit_bin(instruction_MEM.pipeline_reg)[9:16]," ",int_to_32bit_bin(instruction_MEM.pipeline_reg)[17:24]," ",int_to_32bit_bin(instruction_MEM.pipeline_reg)[25:32])
         elseif instruction_MEM.operator == "LB"
-            block_memory_byte = address_present_in_cache(processor.cache, address)    # Returns the byte if present in cahce ,else returns -1
-            processor.accesses+=1
+            block_memory_byte = address_present_in_L1_cache(core.L1_cache, address)    # Returns the byte if present in cahce ,else returns -1
+            core.L1_cache.accesses+=1
             if block_memory_byte != -1
-                #It is a hit
-                processor.hits+=1
+                # It is a hit in the L1 Cache
+                # processor.hits+=1
+                core.L1_cache.hits+=1
                 instruction_MEM.pipeline_reg = binary_to_uint8(block_memory_byte)
             else
-                block_memory = place_block_in_cache(processor.cache, address, processor.memory)
-                instruction_MEM.pipeline_reg = binary_to_uint8(block_memory[(address%processor.cache.block_size)+2])
+                # It is a miss in the L1 Cache
+                # Now we need to check in the LLC Cache
+
+                block_memory_byte = address_present_in_LLC_cache(processor.LLC_cache, address)
+                if block_memory_byte !=-1      
+                    # Its a hit in LLC Cache
+                    processor.LLC_cache.hits+=1
+                    # First we have to place the block in the L1 cache
+                    # Block sizes may be different for LLC and L1 caches
+                    place_block_in_L1_cache_from_LLC_Cache(core.L1_cache,processor.LLC_cache,address,processor.memory)
+                    instruction_MEM.pipeline_reg = binary_to_uint8(block_memory_byte)
+                else 
+                    # It is not a hit in the LLC ,
+                    # we have to fetch the block from main memory and put it in LLC and L1 caches
+                    place_block_in_LLC_cache_from_main_memory(processor.LLC_cache,address,processor.memory)
+                    block_memory = place_block_in_L1_cache_from_main_memory(core.L1_cache, address, processor.memory)
+                    instruction_MEM.pipeline_reg = binary_to_uint8(block_memory[(address%core.L1_cache.block_size)+2])
+                end
             end
             # row,col = address_to_row_col(address)
             # println("before : ",instruction_MEM.pipeline_reg)
@@ -165,10 +204,10 @@ function operation_memory_access_without_df(core::Core_Object,instruction_MEM::I
         elseif instruction_MEM.operator=="SW"
             bin = int_to_32bit_bin(core.registers[instruction_MEM.rs1+1])
             # println("SW : bin = ",bin)
-            write_through_cache(processor.cache,bin[25:32],processor.memory,address)
-            write_through_cache(processor.cache,bin[17:24],processor.memory,address+1)
-            write_through_cache(processor.cache,bin[9:16],processor.memory,address+2)
-            write_through_cache(processor.cache,bin[1:8],processor.memory,address+3)
+            write_through_cache(core.L1_cache,bin[25:32],processor.LLC_cache,processor.memory,address)
+            write_through_cache(core.L1_cache,bin[17:24],processor.LLC_cache,processor.memory,address+1)
+            write_through_cache(core.L1_cache,bin[9:16],processor.LLC_cache,processor.memory,address+2)
+            write_through_cache(core.L1_cache,bin[1:8],processor.LLC_cache,processor.memory,address+3)
             row,col = address_to_row_col(address)
             # in_memory_place_word(memory,row,col,bin)
         end
@@ -340,30 +379,46 @@ function operation_instruction_Fetch_without_df(core::Core_Object,instruction::I
     end
     if core.pc<=limit
         address = (core.pc - 1)*4 
-        block_memory_byte_1 = address_present_in_cache(processor.cache, address)    # Returns the byte if present in cahce ,else returns -1
-        # block_memory = address_present_in_cache(processor.cache,address)    # Returns the block array of strings
-        processor.accesses+=1
+        # block_memory_byte_1 = address_present_in_L1_cache(core.L1_cache, address)    # Returns the byte if present in cahce ,else returns -1
+        block_memory_byte_1 = address_present_in_L1_cache(core.L1_cache, address)    # Returns the byte if present in cahce ,else returns -1
+        # block_memory = address_present_in_L1_cache(core.L1_cache,address)    # Returns the block array of strings
+        core.L1_cache.accesses+=1
         if block_memory_byte_1 !=-1
             # It is an hit
             # println("It's a hit")
-            if processor.cache.hit_time > 1
-                processor.cache.temp_penalty_IF_access = processor.cache.hit_time
-                core.stall_count+=(processor.cache.hit_time-1)
+            if core.L1_cache.hit_time > 1
+                core.L1_cache.temp_penalty_IF_access = core.L1_cache.hit_time
+                core.stall_count+=(core.L1_cache.hit_time-1)
             end
-            block_memory_byte_2 = address_present_in_cache(processor.cache, address + 1)    # Returns the byte if present in cahce ,else returns -1
-            block_memory_byte_3 = address_present_in_cache(processor.cache, address + 2)    # Returns the byte if present in cahce ,else returns -1
-            block_memory_byte_4 = address_present_in_cache(processor.cache, address + 3)    # Returns the byte if present in cahce ,else returns -1
+            block_memory_byte_2 = address_present_in_L1_cache(core.L1_cache, address + 1)    # Returns the byte if present in cahce ,else returns -1
+            block_memory_byte_3 = address_present_in_L1_cache(core.L1_cache, address + 2)    # Returns the byte if present in cahce ,else returns -1
+            block_memory_byte_4 = address_present_in_L1_cache(core.L1_cache, address + 3)    # Returns the byte if present in cahce ,else returns -1
             instruction.Four_byte_instruction = block_memory_byte_4 * block_memory_byte_3 * block_memory_byte_2 * block_memory_byte_1
-            processor.hits+=1
+            # processor.hits+=1
+            core.L1_cache.hits+=1
         else
-            # It is not a hit
-            # println("It's not a hit")
-            if processor.cache.miss_penalty > 1
-                processor.cache.temp_penalty_IF_access = processor.cache.miss_penalty
-                core.stall_count+=(processor.cache.miss_penalty-1)
+            processor.LLC_cache.accesses+=1
+            # It is not a hit in L1 cache # println("It's not a hit")
+            # Now we need to check in the LLC Cache
+            block_memory_byte_1 = address_present_in_LLC_cache(processor.LLC_cache, address)
+            if block_memory_byte_1 !=-1      
+                # Its a hit in LLC Cache
+                processor.LLC_cache.hits+=1
+                # First we have to place the block in the L1 cache
+                # Block sizes may be different for LLC and L1 caches
+                block_memory = place_block_in_L1_cache_from_LLC_Cache(core.L1_cache,processor.LLC_cache,address,processor.memory)
+                instruction.Four_byte_instruction = block_memory[(address%core.L1_cache.block_size)+5]*block_memory[(address%core.L1_cache.block_size)+4]*block_memory[(address%core.L1_cache.block_size)+3]*block_memory[(address%core.L1_cache.block_size)+2]
+            else 
+                # It is not a hit in the LLC ,
+                # we have to fetch the block from main memory and put it in LLC and L1 caches
+                place_block_in_LLC_cache_from_main_memory(processor.LLC_cache,address,processor.memory)
+                block_memory = place_block_in_L1_cache_from_main_memory(core.L1_cache,address,processor.memory)
+                instruction.Four_byte_instruction = block_memory[(address%core.L1_cache.block_size)+5]*block_memory[(address%core.L1_cache.block_size)+4]*block_memory[(address%core.L1_cache.block_size)+3]*block_memory[(address%core.L1_cache.block_size)+2]
             end
-            block_memory = place_block_in_cache(processor.cache,address,processor.memory)
-            instruction.Four_byte_instruction = block_memory[(address%processor.cache.block_size)+5]*block_memory[(address%processor.cache.block_size)+4]*block_memory[(address%processor.cache.block_size)+3]*block_memory[(address%processor.cache.block_size)+2]
+            if core.L1_cache.miss_penalty > 1
+                core.L1_cache.temp_penalty_IF_access = core.L1_cache.miss_penalty
+                core.stall_count+=(core.L1_cache.miss_penalty-1)
+            end
         end        
         # instruction.Four_byte_instruction = int_to_8bit_bin(memory[core.pc,4])*int_to_8bit_bin(memory[core.pc,3])*int_to_8bit_bin(memory[core.pc,2])*int_to_8bit_bin(memory[core.pc,1])
         core.write_back_of_last_instruction_done = false

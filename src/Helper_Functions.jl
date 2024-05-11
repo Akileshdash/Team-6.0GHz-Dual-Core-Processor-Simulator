@@ -4,7 +4,7 @@ include("Processor_Core_Init.jl")
                                     Cache Replacement Functions
 ==============================================================================================#
 
-function address_present_in_cache(cache::Cache,address)
+function address_present_in_L1_cache(cache::L1_Cache,address)
     address = int_to_32bit_bin(address)
     cache.offset_bits = address[end-cache.length_of_offset_bits+1:end]
     cache.index_bits = address[end-cache.length_of_offset_bits-cache.length_of_index_bits+1:end-cache.length_of_offset_bits]
@@ -34,7 +34,50 @@ function address_present_in_cache(cache::Cache,address)
     end
 end
 
-function place_block_in_cache(cache::Cache,address,memory)
+function address_present_in_LLC_cache(cache::LLC_Cache,address)
+    address = int_to_32bit_bin(address)
+    cache.offset_bits = address[end-cache.length_of_offset_bits+1:end]
+    cache.index_bits = address[end-cache.length_of_offset_bits-cache.length_of_index_bits+1:end-cache.length_of_offset_bits]
+    cache.tag_bits = address[1:end-cache.length_of_offset_bits-cache.length_of_index_bits]
+    set_number = binary_to_uint8(cache.index_bits)
+    # println("\n set number = ",set_number)
+    # Print the set
+    # for i in 1:cache.associativity
+    #     println(cache.memory[set_number + 1].set[i])
+    # end
+    index = findfirst([block.block[1] == cache.tag_bits for block in cache.memory[set_number+1].set])
+    if index !== nothing
+        # Updating Recency of that block
+        old_recency = cache.memory[set_number+1].set[index].recency
+        cache.memory[set_number+1].set[index].recency = 0
+        for i in 1:cache.associativity  
+            if cache.memory[set_number+1].set[i].recency < old_recency  &&  cache.memory[set_number+1].set[i].isValid
+                cache.memory[set_number+1].set[i].recency+=1
+            end
+        end
+        # println("Block present, addresss = ",cache.tag_bits," ",cache.index_bits," ",cache.offset_bits)
+        # return block_memory[(address%cache.block_size)+2]
+        return cache.memory[set_number+1].set[index].block[binary_to_uint8(cache.offset_bits)+2]
+    else
+        # println("Block Not Found addresss = ",cache.tag_bits," ",cache.index_bits," ",cache.offset_bits)
+        return -1
+    end
+end
+
+function place_block_in_L1_cache_from_LLC_Cache(L1_cache::L1_Cache,LLC_cache::LLC_Cache,address,memory)
+    new_block = retrieve_block_from_memory(L1_cache,address,memory)
+    set_number = binary_to_uint8(L1_cache.index_bits)
+    if L1_cache.LRU_selected
+        LRU_cache_replacement_policy(L1_cache,new_block,set_number) 
+    elseif L1_cache.Hashing_selected
+        Hashing_cache_replacement_policy(L1_cache,new_block,set_number) 
+    else
+        Random_cache_replacement_policy(L1_cache,new_block,set_number)
+    end
+    return new_block.block
+end
+
+function place_block_in_L1_cache_from_main_memory(cache::L1_Cache,address,memory)
     new_block = retrieve_block_from_memory(cache,address,memory)      #Returns a string array of the bytes from memory
     set_number = binary_to_uint8(cache.index_bits)
     if cache.LRU_selected
@@ -47,7 +90,20 @@ function place_block_in_cache(cache::Cache,address,memory)
     return new_block.block
 end
 
-function retrieve_block_from_memory(cache::Cache,address,memory)
+function place_block_in_LLC_cache_from_main_memory(cache::LLC_Cache,address,memory)
+    new_block = retrieve_block_from_memory(cache,address,memory)      #Returns a string array of the bytes from memory
+    set_number = binary_to_uint8(cache.index_bits)
+    if cache.LRU_selected
+        LRU_cache_replacement_policy(cache,new_block,set_number) 
+    elseif cache.Hashing_selected
+        Hashing_cache_replacement_policy(cache,new_block,set_number) 
+    else
+        Random_cache_replacement_policy(cache,new_block,set_number)
+    end
+    # return new_block.block
+end
+
+function retrieve_block_from_memory(cache::L1_Cache,address,memory)
     Block = block_Init(cache.block_size)
     address_in_bits = int_to_32bit_bin(address)
     zeros = repeat("0",cache.length_of_offset_bits)
@@ -63,7 +119,23 @@ function retrieve_block_from_memory(cache::Cache,address,memory)
     return Block
 end
 
-function LRU_cache_replacement_policy(cache::Cache,Block,set_number)
+function retrieve_block_from_memory(cache::LLC_Cache,address,memory)
+    Block = block_Init(cache.block_size)
+    address_in_bits = int_to_32bit_bin(address)
+    zeros = repeat("0",cache.length_of_offset_bits)
+    block_lower_bound = binary_to_uint8(address_in_bits[1:end-cache.length_of_offset_bits]*zeros)
+    block_upper_bound = block_lower_bound+cache.block_size-1
+    # println("address = ",address," block_lower_bound = ",block_lower_bound," block_upper_bound = ",block_upper_bound)
+    # tag 
+    Block.block[1] = cache.tag_bits
+    #Filling remaining with memory
+    for byte_address in block_lower_bound:block_upper_bound
+        Block.block[(byte_address % cache.block_size)+2] = int_to_8bit_bin(return_byte_from_memory(memory,byte_address))
+    end
+    return Block
+end
+
+function LRU_cache_replacement_policy(cache::L1_Cache,Block,set_number)
     # println("new block = ",Block)
     index = nothing
     #If initially any empty block is present in the set
@@ -97,41 +169,108 @@ function LRU_cache_replacement_policy(cache::Cache,Block,set_number)
     # println("-------------------------------------------------------------------------------")
 end
 
-function Hashing_cache_replacement_policy(cache::Cache,Block,set_number)
+function Hashing_cache_replacement_policy(cache::L1_Cache,Block,set_number)
     hash_value = (binary_to_uint8(Block.block[1])%cache.block_size) + 1
     Block.isValid = true
     cache.memory[set_number + 1].set[hash_value] = deepcopy(Block)
 end
 
-function Random_cache_replacement_policy(cache::Cache,Block,set_number)
+function Random_cache_replacement_policy(cache::L1_Cache,Block,set_number)
     Block.isValid = true
     cache.memory[set_number + 1].set[rand(1:cache.block_size)] = deepcopy(Block)
 end
 
-function write_through_cache(cache::Cache,bin,memory,address)
+function LRU_cache_replacement_policy(cache::LLC_Cache,Block,set_number)
+    # println("new block = ",Block)
+    index = nothing
+    #If initially any empty block is present in the set
+    for (block_index, block) in enumerate(cache.memory[set_number + 1].set)
+        if !block.isValid
+            index = block_index
+            Block.isValid = true
+            cache.memory[set_number + 1].set[index] = deepcopy(Block)
+            break
+        end
+    end
+    if index == nothing
+        #From previous function we know set number 
+        tag_to_be_replaced = cache.memory[set_number+1].set
+        recencies = [block.recency for block in cache.memory[set_number + 1].set]
+        max_recency_index = argmax(recencies)
+        Block.isValid = true
+        cache.memory[set_number + 1].set[max_recency_index] = deepcopy(Block)
+    end
+    for block in cache.memory[set_number + 1].set 
+        if block.isValid
+            block.recency+=1 
+        end
+    end
+    #Printing the set 
+    # println("After Replacement Policy ----------------------------------------------------------")
+    # println("\n set number = ",set_number)
+    # for i in 1:cache.associativity
+    #     println(cache.memory[set_number + 1].set[i])
+    # end
+    # println("-------------------------------------------------------------------------------")
+end
+
+function Hashing_cache_replacement_policy(cache::LLC_Cache,Block,set_number)
+    hash_value = (binary_to_uint8(Block.block[1])%cache.block_size) + 1
+    Block.isValid = true
+    cache.memory[set_number + 1].set[hash_value] = deepcopy(Block)
+end
+
+function Random_cache_replacement_policy(cache::LLC_Cache,Block,set_number)
+    Block.isValid = true
+    cache.memory[set_number + 1].set[rand(1:cache.block_size)] = deepcopy(Block)
+end
+
+
+function write_through_cache(L1_cache::L1_Cache,bin,LLC_cache::LLC_Cache,memory,address)
     address = int_to_32bit_bin(address)
-    cache.offset_bits = address[end-cache.length_of_offset_bits+1:end]
-    cache.index_bits = address[end-cache.length_of_offset_bits-cache.length_of_index_bits+1:end-cache.length_of_offset_bits]
-    cache.tag_bits = address[1:end-cache.length_of_offset_bits-cache.length_of_index_bits]
-    set_number = binary_to_uint8(cache.index_bits)
-    index = findfirst([block.block[1] == cache.tag_bits for block in cache.memory[set_number+1].set])
+    # First Updating that Byte in the L1 Cache
+    L1_cache.offset_bits = address[end-L1_cache.length_of_offset_bits+1:end]
+    L1_cache.index_bits = address[end-L1_cache.length_of_offset_bits-L1_cache.length_of_index_bits+1:end-L1_cache.length_of_offset_bits]
+    L1_cache.tag_bits = address[1:end-L1_cache.length_of_offset_bits-L1_cache.length_of_index_bits]
+    set_number = binary_to_uint8(L1_cache.index_bits)
+    index = findfirst([block.block[1] == L1_cache.tag_bits for block in L1_cache.memory[set_number+1].set])
     if index !== nothing
         # Updating Recency of that block
-        old_recency = cache.memory[set_number+1].set[index].recency
-        cache.memory[set_number+1].set[index].recency = 0
-        for i in 1:cache.associativity  
-            if cache.memory[set_number+1].set[i].recency < old_recency  &&  cache.memory[set_number+1].set[i].isValid
-                cache.memory[set_number+1].set[i].recency+=1
+        old_recency = L1_cache.memory[set_number+1].set[index].recency
+        L1_cache.memory[set_number+1].set[index].recency = 0
+        for i in 1:L1_cache.associativity  
+            if L1_cache.memory[set_number+1].set[i].recency < old_recency  &&  L1_cache.memory[set_number+1].set[i].isValid
+                L1_cache.memory[set_number+1].set[i].recency+=1
             end
         end
-        #Updating that byte in the block
-        cache.memory[set_number+1].set[index].block[binary_to_uint8(cache.offset_bits)+2] = bin
+        #Updating that byte in the block of L1 Cache
+        L1_cache.memory[set_number+1].set[index].block[binary_to_uint8(L1_cache.offset_bits)+2] = bin
     end
+
+    # Then Updating that Byte in LLC Cache
+    LLC_cache.offset_bits = address[end-LLC_cache.length_of_offset_bits+1:end]
+    LLC_cache.index_bits = address[end-LLC_cache.length_of_offset_bits-LLC_cache.length_of_index_bits+1:end-LLC_cache.length_of_offset_bits]
+    LLC_cache.tag_bits = address[1:end-LLC_cache.length_of_offset_bits-LLC_cache.length_of_index_bits]
+    set_number = binary_to_uint8(LLC_cache.index_bits)
+    index = findfirst([block.block[1] == LLC_cache.tag_bits for block in LLC_cache.memory[set_number+1].set])
+    if index !== nothing
+        # Updating Recency of that block
+        old_recency = LLC_cache.memory[set_number+1].set[index].recency
+        LLC_cache.memory[set_number+1].set[index].recency = 0
+        for i in 1:LLC_cache.associativity  
+            if LLC_cache.memory[set_number+1].set[i].recency < old_recency  &&  LLC_cache.memory[set_number+1].set[i].isValid
+                LLC_cache.memory[set_number+1].set[i].recency+=1
+            end
+        end
+        #Updating that byte in the block of LLC Cache
+        LLC_cache.memory[set_number+1].set[index].block[binary_to_uint8(LLC_cache.offset_bits)+2] = bin
+    end
+
     # Printing the Set
     # println("------------------------------------------------------------------------------------------------")
     # println("Updated Set")
-    # for i in 1:cache.associativity
-    #     println(cache.memory[set_number + 1].set[i])
+    # for i in 1:L1_cache.associativity
+    #     println(L1_cache.memory[set_number + 1].set[i])
     # end
     # println("------------------------------------------------------------------------------------------------")
     # Updating in the main memory also
@@ -172,29 +311,29 @@ function stall_manager(core::Core_Object,processor::Processor)
         core.stall_due_to_load = false
     end
 
-    if processor.cache.temp_penalty_mem_access > 1
+    if core.L1_cache.temp_penalty_mem_access > 1
         core.instruction_IF.stall_due_to_mem_access = true
         core.instruction_ID_RF.stall_due_to_mem_access = true
         core.instruction_EX.stall_due_to_mem_access = true
         core.instruction_MEM.stall_due_to_mem_access = true
         core.instruction_WriteBack.stall_due_to_mem_access = true
-        processor.cache.temp_penalty_mem_access-=1
-        # println("processor.cache.temp_penalty_mem_access = ",processor.cache.temp_penalty_mem_access)
-    elseif processor.cache.temp_penalty_mem_access == 1
+        core.L1_cache.temp_penalty_mem_access-=1
+        # println("core.L1_cache.temp_penalty_mem_access = ",core.L1_cache.temp_penalty_mem_access)
+    elseif core.L1_cache.temp_penalty_mem_access == 1
         core.instruction_IF.stall_due_to_mem_access = false
         core.instruction_ID_RF.stall_due_to_mem_access = false
         core.instruction_EX.stall_due_to_mem_access = false
         core.instruction_MEM.stall_due_to_mem_access = false
         core.instruction_WriteBack.stall_due_to_mem_access = false
-        if processor.cache.temp_penalty_IF_access > 1 && processor.cache.temp_penalty_mem_access == 1
+        if core.L1_cache.temp_penalty_IF_access > 1 && core.L1_cache.temp_penalty_mem_access == 1
             core.instruction_IF.stall_due_to_IF_access = true
             core.instruction_ID_RF.stall_due_to_IF_access = true
             core.instruction_EX.stall_due_to_IF_access = true
             core.instruction_MEM.stall_due_to_IF_access = true
             core.instruction_WriteBack.stall_due_to_IF_access = true
-            processor.cache.temp_penalty_IF_access-=1
-            # println("processor.cache.temp_penalty_IF_access = ",processor.cache.temp_penalty_IF_access)
-        elseif processor.cache.temp_penalty_IF_access == 1 && processor.cache.temp_penalty_mem_access == 1
+            core.L1_cache.temp_penalty_IF_access-=1
+            # println("core.L1_cache.temp_penalty_IF_access = ",core.L1_cache.temp_penalty_IF_access)
+        elseif core.L1_cache.temp_penalty_IF_access == 1 && core.L1_cache.temp_penalty_mem_access == 1
             core.instruction_IF.stall_due_to_IF_access = false
             core.instruction_ID_RF.stall_due_to_IF_access = false
             core.instruction_EX.stall_due_to_IF_access = false

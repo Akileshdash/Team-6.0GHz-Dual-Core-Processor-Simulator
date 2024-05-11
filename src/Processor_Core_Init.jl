@@ -29,11 +29,13 @@ function set_Init(associativity, block_size)
     return Set(associativity, set)
 end
 
-mutable struct Cache
+mutable struct L1_Cache
     size::Int
     block_size::Int
     associativity::Int
     memory::Array{Set, 1}
+    hits::Int
+    accesses::Int
     length_of_offset_bits::Int
     length_of_index_bits::Int
     offset_bits::String
@@ -48,12 +50,14 @@ mutable struct Cache
     Hashing_selected::Bool
 end
 
-function cache_Init()
+function L1_Cache_Init()
     size = 64
     block_size = 8
     associativity = 8
     number_of_sets = div(div(size, block_size),associativity)
     memory = Set[]
+    hits = 0
+    accesses = 0
     for _ in 1:number_of_sets
         push!(memory, set_Init(associativity, block_size))
     end
@@ -69,11 +73,13 @@ function cache_Init()
     LRU_selected = false
     Random_selected = false
     Hashing_selected = false
-    return Cache(
+    return L1_Cache(
         size,
         block_size,
         associativity,
         memory,
+        hits,
+        accesses,
         length_of_offset_bits,
         length_of_index_bits,
         offset_bits,
@@ -88,6 +94,73 @@ function cache_Init()
         Hashing_selected
     )
 end
+
+mutable struct LLC_Cache
+    size::Int
+    block_size::Int
+    associativity::Int
+    memory::Array{Set, 1}
+    hits::Int
+    accesses::Int
+    length_of_offset_bits::Int
+    length_of_index_bits::Int
+    offset_bits::String
+    index_bits::String
+    tag_bits::String
+    miss_penalty::Int
+    hit_time::Int
+    temp_penalty_mem_access::Int
+    temp_penalty_IF_access::Int
+    LRU_selected::Bool
+    Random_selected::Bool
+    Hashing_selected::Bool
+end
+
+function LLC_Cache_Init()
+    size = 64
+    block_size = 8
+    associativity = 8
+    number_of_sets = div(div(size, block_size),associativity)
+    memory = Set[]
+    hits = 0
+    accesses = 0
+    for _ in 1:number_of_sets
+        push!(memory, set_Init(associativity, block_size))
+    end
+    length_of_offset_bits = Int(log2(block_size))
+    length_of_index_bits = Int(ceil(log2(number_of_sets)))
+    offset_bits = ""
+    index_bits = ""
+    tag_bits = ""
+    miss_penalty = 1
+    hit_time = 1
+    temp_penalty_mem_access = 1
+    temp_penalty_IF_access = 1
+    LRU_selected = false
+    Random_selected = false
+    Hashing_selected = false
+    return LLC_Cache(
+        size,
+        block_size,
+        associativity,
+        memory,
+        hits,
+        accesses,
+        length_of_offset_bits,
+        length_of_index_bits,
+        offset_bits,
+        index_bits,
+        tag_bits,
+        miss_penalty,
+        hit_time,
+        temp_penalty_mem_access,
+        temp_penalty_IF_access,
+        LRU_selected,
+        Random_selected,
+        Hashing_selected
+    )
+end
+
 
 #==========================================================================================================
                                         Instruction Object
@@ -157,6 +230,9 @@ mutable struct Core_Object
     program::Array{String, 1}
     clock::Int
     instruction_count::Int
+
+    #L1 Cache
+    L1_cache::L1_Cache
     
     #Stall
     stall_count::Int
@@ -208,6 +284,9 @@ function core_Init(id)
     clock = 0
     instruction_count = 0
 
+    #L1 Cache
+    L1_cache = L1_Cache_Init()
+
     #Stall
     stall_count = 0
     stall_due_to_jump = false
@@ -257,6 +336,7 @@ function core_Init(id)
         program,
         clock,
         instruction_count,
+        L1_cache,
         stall_count,
         stall_due_to_jump,
         stall_present_due_to_data_depend_previous_inst,
@@ -295,7 +375,7 @@ end
 ===========================================================================================================#
 
 mutable struct Processor
-    cache::Cache
+    LLC_cache::LLC_Cache
     memory::Array{UInt8,2}
     clock::Int
     cores::Array{Core_Object,1}
@@ -304,11 +384,11 @@ mutable struct Processor
 end
 
 function processor_Init()
-    cache = cache_Init()
+    LLC_cache = LLC_Cache_Init()
     memory = zeros(UInt8, (1024, 4))
     clock = 0
     cores = [core_Init(1), core_Init(2)] 
     hits = 0
     accesses = 0
-    return Processor(cache, memory, clock, cores, hits, accesses)
+    return Processor(LLC_cache, memory, clock, cores, hits, accesses)
 end
