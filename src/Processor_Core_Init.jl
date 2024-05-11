@@ -7,13 +7,19 @@ mutable struct Block
     recency::Int
     block::Array{String, 1}
     isValid::Bool
+    modified_state::Bool
+    shared_state::Bool
+    inValid_state::Bool
 end
 
 function block_Init(size)
     recency = 0
     block = fill("", size + 1)
     isValid = false
-    return Block(size, recency, block, isValid)
+    modified_state = false
+    shared_state = false
+    inValid_state = false
+    return Block(size, recency, block, isValid, modified_state, shared_state, inValid_state)
 end
 
 mutable struct Set

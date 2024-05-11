@@ -122,7 +122,7 @@ function operation_memory_access_without_df(core::Core_Object,instruction_MEM::I
                             processor.LLC_cache.hits+=1
                             # First we have to place the block in the L1 cache
                             # Block sizes may be different for LLC and L1 caches
-                            place_block_in_L1_cache_from_LLC_Cache(core.L1_cache,processor.LLC_cache,address,processor.memory)
+                            place_block_in_L1_cache_from_LLC_Cache(core.id,core.L1_cache,processor.LLC_cache,address,processor.memory)
                             block_memory_byte_2 = address_present_in_L1_cache(core.L1_cache, address + 1)
                             block_memory_byte_3 = address_present_in_L1_cache(core.L1_cache, address + 2)
                             block_memory_byte_4 = address_present_in_L1_cache(core.L1_cache, address + 3)
@@ -187,7 +187,7 @@ function operation_memory_access_without_df(core::Core_Object,instruction_MEM::I
                     processor.LLC_cache.hits+=1
                     # First we have to place the block in the L1 cache
                     # Block sizes may be different for LLC and L1 caches
-                    place_block_in_L1_cache_from_LLC_Cache(core.L1_cache,processor.LLC_cache,address,processor.memory)
+                    place_block_in_L1_cache_from_LLC_Cache(core.id,core.L1_cache,processor.LLC_cache,address,processor.memory)
                     instruction_MEM.pipeline_reg = binary_to_uint8(block_memory_byte)
                 else 
                     # It is not a hit in the LLC ,
@@ -406,7 +406,7 @@ function operation_instruction_Fetch_without_df(core::Core_Object,instruction::I
                 processor.LLC_cache.hits+=1
                 # First we have to place the block in the L1 cache
                 # Block sizes may be different for LLC and L1 caches
-                block_memory = place_block_in_L1_cache_from_LLC_Cache(core.L1_cache,processor.LLC_cache,address,processor.memory)
+                block_memory = place_block_in_L1_cache_from_LLC_Cache(core.id,core.L1_cache,processor.LLC_cache,address,processor.memory)
                 instruction.Four_byte_instruction = block_memory[(address%core.L1_cache.block_size)+5]*block_memory[(address%core.L1_cache.block_size)+4]*block_memory[(address%core.L1_cache.block_size)+3]*block_memory[(address%core.L1_cache.block_size)+2]
             else 
                 # It is not a hit in the LLC ,

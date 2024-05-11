@@ -64,8 +64,9 @@ function address_present_in_LLC_cache(cache::LLC_Cache,address)
     end
 end
 
-function place_block_in_L1_cache_from_LLC_Cache(L1_cache::L1_Cache,LLC_cache::LLC_Cache,address,memory)
+function place_block_in_L1_cache_from_LLC_Cache(core_id,L1_cache::L1_Cache,LLC_cache::LLC_Cache,address,memory)
     new_block = retrieve_block_from_memory(L1_cache,address,memory)
+    new_block.shared_state = true
     set_number = binary_to_uint8(L1_cache.index_bits)
     if L1_cache.LRU_selected
         LRU_cache_replacement_policy(L1_cache,new_block,set_number) 
