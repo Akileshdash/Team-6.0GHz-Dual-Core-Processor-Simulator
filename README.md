@@ -92,6 +92,11 @@ This project is a simulator of a dual-core processor for the ISA of RISC-V. It w
 
 ## Minutes of Meetings
 
+### `Meeting 15: Date 9 May 2024 `
+- Privatization of L1 caches for each core will be implemented.
+- A Level 2 Cache or Last Level Cache (LLC) will be implemented.
+- SIMD instructions were discussed but due to time constraints couldn't be implemented.
+
 ### `Meeting 14: Date: 9 Apr 2024 `
 - Decided to add user defined input, for Cache size, Block size, Associativity and Cache Replacement Policy. Pre-existing user inputs are Variable Latency of arithmetic opearations and Data forwarding.
 - Successfully created a front-end for our code. Attaching it with the backend remains.
